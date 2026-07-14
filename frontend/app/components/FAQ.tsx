@@ -38,26 +38,26 @@ export default function FAQ() {
   }
 
   return (
-    <section id="faq" className="border-t border-border px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+    <section id="faq" className="border-t border-border px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <h2 className="text-xl font-bold tracking-tight text-foreground">
           Frequently Asked Questions
         </h2>
-        <dl className="mt-8 divide-y divide-neutral-200 dark:divide-neutral-800">
+        <dl className="mt-8 divide-y divide-border">
           {faqs.map((faq, index) => (
-            <div key={index} className="py-4">
+            <div key={index} className="py-5">
               <dt>
                 <button
                   type="button"
                   onClick={() => toggle(index)}
                   aria-expanded={openIndex === index}
-                  className="flex w-full items-start justify-between gap-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+                  className="flex w-full items-start justify-between gap-4 text-left font-medium text-foreground transition-colors duration-150 hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                 >
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-sm font-semibold">
                     {faq.question}
                   </span>
                   <span
-                    className="ml-auto flex-shrink-0 text-neutral-400 transition-transform duration-200"
+                    className="ml-auto flex-shrink-0 text-muted transition-transform duration-150 motion-reduce:transition-none"
                     style={{
                       transform: openIndex === index ? "rotate(45deg)" : "rotate(0deg)",
                     }}
@@ -69,7 +69,7 @@ export default function FAQ() {
                       viewBox="0 0 16 16"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="1.5"
+                      strokeWidth="2"
                     >
                       <line x1="8" y1="3" x2="8" y2="13" />
                       <line x1="3" y1="8" x2="13" y2="8" />
@@ -78,7 +78,7 @@ export default function FAQ() {
                 </button>
               </dt>
               {openIndex === index && (
-                <dd className="mt-2 pr-8 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                <dd className="mt-3 pr-8 text-sm leading-relaxed text-secondary">
                   {faq.answer}
                 </dd>
               )}

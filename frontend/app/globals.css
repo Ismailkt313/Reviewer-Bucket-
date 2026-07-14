@@ -1,45 +1,51 @@
 @import "tailwindcss";
 
-@theme inline {
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-neutral-50: #fafafa;
-  --color-neutral-100: #f5f5f5;
-  --color-neutral-200: #e5e5e5;
-  --color-neutral-300: #d4d4d4;
-  --color-neutral-400: #a3a3a3;
-  --color-neutral-500: #737373;
-  --color-neutral-600: #525252;
-  --color-neutral-700: #404040;
-  --color-neutral-800: #262626;
-  --color-neutral-900: #171717;
-  --color-neutral-950: #0a0a0a;
-  --color-accent: #1a1a2e;
-  --color-accent-light: #2d2d44;
-  --color-border: #e5e5e5;
-  --color-border-dark: #2a2a2a;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-focus: var(--ring-focus);
 }
 
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
+  
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --text-secondary: #404040;
+  --text-muted: #737373;
+  --border: #e5e5e5;
+  --accent: #171717;
+  --ring-focus: #171717;
+  
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-
-  .border-border {
-    border-color: var(--color-border-dark);
-  }
+.dark {
+  --background: #0d0d0d;
+  --foreground: #f5f5f5;
+  
+  --surface: #161616;
+  --elevated: #222222;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --border: #262626;
+  --accent: #f5f5f5;
+  --ring-focus: #f5f5f5;
+  
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;

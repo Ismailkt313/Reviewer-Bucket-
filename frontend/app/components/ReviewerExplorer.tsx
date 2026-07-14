@@ -37,27 +37,17 @@ export default function ReviewerExplorer({ reviewers }: ReviewerExplorerProps) {
 
   return (
     <>
-      <section className="px-4 pb-12 pt-10 sm:px-6 sm:pt-14">
-        <div className="mx-auto max-w-5xl">
-          <div className="max-w-xl">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Find Your Brocamp Reviewer by Code
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400 sm:text-base">
-              Search the reviewer code shown during your review and quickly find the matching
-              reviewer.
-            </p>
-          </div>
-
-          <div className="relative mt-6 max-w-xl">
+      <section className="px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <div className="relative">
             <label htmlFor="reviewer-search" className="sr-only">
               Search by code or reviewer name
             </label>
             <div className="relative">
               <svg
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-                width="18"
-                height="18"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -75,16 +65,16 @@ export default function ReviewerExplorer({ reviewers }: ReviewerExplorerProps) {
                 role="searchbox"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by code or reviewer name"
+                placeholder="Search BR 64 or reviewer name"
                 autoComplete="off"
-                className="h-12 w-full rounded-lg border border-neutral-200 bg-background pl-10 pr-10 text-sm text-foreground placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-200 dark:border-neutral-700 dark:placeholder:text-neutral-500 dark:focus:border-neutral-500 dark:focus:ring-neutral-700 sm:h-11"
+                className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-12 text-base text-foreground shadow-xs transition-[border-color,box-shadow] duration-150 placeholder:text-muted/65 focus:border-neutral-400 focus:ring-4 focus:ring-focus/15 focus:outline-none dark:focus:border-neutral-500"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
                   aria-label="Clear search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-neutral-400 transition-colors hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground dark:hover:text-neutral-300"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted transition-colors duration-150 hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
                 >
                   <svg
                     width="16"
@@ -92,7 +82,7 @@ export default function ReviewerExplorer({ reviewers }: ReviewerExplorerProps) {
                     viewBox="0 0 16 16"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="1.5"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     aria-hidden="true"
                   >
@@ -106,34 +96,29 @@ export default function ReviewerExplorer({ reviewers }: ReviewerExplorerProps) {
         </div>
       </section>
 
-      <section id="reviewers" aria-label="Reviewer directory" className="px-4 pb-16 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+      <section id="reviewers" aria-label="Reviewer directory" className="border-t border-border bg-background px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
               Reviewers
             </h2>
-            <span className="text-sm text-neutral-400 dark:text-neutral-500">
-              {filtered.length}
+            <span className="text-sm font-medium text-secondary">
+              {query ? `${filtered.length} found` : `${reviewers.length} available`}
             </span>
           </div>
 
           {filtered.length > 0 ? (
-            <div
-              role="list"
-              className="mt-4 overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-800"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                {filtered.map((reviewer) => (
-                  <ReviewerRow key={reviewer.id} reviewer={reviewer} />
-                ))}
-              </div>
+            <div role="list" className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
+              {filtered.map((reviewer) => (
+                <ReviewerRow key={reviewer.id} reviewer={reviewer} />
+              ))}
             </div>
           ) : (
-            <div className="mt-8 text-center">
-              <p className="text-sm font-medium text-foreground">
-                No reviewer found for &ldquo;{query}&rdquo;
-              </p>
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            <div className="mt-16 text-center">
+              <h3 className="text-lg font-bold text-foreground">
+                Couldn&apos;t find &ldquo;{query}&rdquo;
+              </h3>
+              <p className="mt-2 text-sm text-secondary">
                 Check the code or try searching without spaces.
               </p>
             </div>

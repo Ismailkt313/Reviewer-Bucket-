@@ -18,23 +18,25 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="border-t border-border px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+    <section id="how-it-works" className="border-t border-border px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <h2 className="text-xl font-bold tracking-tight text-foreground">
           How Reviewer Bucket Works
         </h2>
-        <div className="mt-8 grid gap-8 sm:grid-cols-3">
+        <div className="mt-8 flex flex-col gap-8">
           {steps.map((step) => (
-            <div key={step.number} className="flex flex-col gap-2">
-              <span className="font-mono text-sm font-medium text-neutral-400">
+            <div key={step.number} className="flex gap-4">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface border border-border font-mono text-xs font-semibold text-secondary">
                 {step.number}
               </span>
-              <h3 className="text-base font-medium text-foreground">
-                {step.title}
-              </h3>
-              <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-                {step.description}
-              </p>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-base font-semibold text-foreground">
+                  {step.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-secondary">
+                  {step.description}
+                </p>
+              </div>
             </div>
           ))}
         </div>

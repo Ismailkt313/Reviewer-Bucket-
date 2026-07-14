@@ -1,4 +1,5 @@
 import Header from "./components/Header";
+import Hero from "./components/Hero";
 import ReviewerExplorer from "./components/ReviewerExplorer";
 import HowItWorks from "./components/HowItWorks";
 import About from "./components/About";
@@ -12,6 +13,7 @@ export default function Home() {
     <>
       <Header />
       <main className="flex-1">
+        <Hero />
         <ReviewerExplorer reviewers={reviewers} />
         <HowItWorks />
         <About />
