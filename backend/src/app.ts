@@ -4,6 +4,9 @@ import helmet from "helmet";
 import { env } from "./config/env";
 import { notFoundMiddleware } from "./middleware/not-found.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
+import reviewerRoutes from "./modules/reviewers/reviewer.routes";
+import ratingRoutes from "./modules/ratings/rating.routes";
+import experienceRoutes from "./modules/experiences/experience.routes";
 
 const app = express();
 
@@ -23,6 +26,10 @@ app.get("/api/health", (_req, res) => {
     message: "Reviewer Bucket API is running"
   });
 });
+
+app.use("/api/reviewers", reviewerRoutes);
+app.use("/api/reviewers", ratingRoutes);
+app.use("/api/reviewers", experienceRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

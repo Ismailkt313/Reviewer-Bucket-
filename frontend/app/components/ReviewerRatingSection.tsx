@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getApiUrl } from "@/app/utils/api";
 
 type LocalRating = {
   reviewerId: string;
@@ -10,8 +11,8 @@ type LocalRating = {
 
 type ReviewerRatingSectionProps = {
   reviewerId: string;
+  initialAverageRating: number | null;
   initialRatingCount: number;
-  initialRatingTotal: number;
 };
 
 function StarIcon({ filled, className }: { filled: boolean; className?: string }) {
@@ -34,13 +35,16 @@ function StarIcon({ filled, className }: { filled: boolean; className?: string }
 
 export default function ReviewerRatingSection({
   reviewerId,
-  initialRatingCount,
-  initialRatingTotal
+  initialAverageRating,
+  initialRatingCount
 }: ReviewerRatingSectionProps) {
   const [localRating, setLocalRating] = useState<number | undefined>(undefined);
   const [hoverRating, setHoverRating] = useState<number | undefined>(undefined);
+  const [averageRating, setAverageRating] = useState<number | null>(initialAverageRating);
+  const [ratingCount, setRatingCount] = useState<number>(initialRatingCount);
   const [mounted, setMounted] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,47 +83,82 @@ export default function ReviewerRatingSection({
     };
   }, []);
 
-  const handleRate = (value: number) => {
-    setLocalRating(value);
-
+  const handleRate = async (value: number) => {
+    setErrorMessage("");
     try {
-      const raw = localStorage.getItem("reviewerBucket:ratings");
-      let list: LocalRating[] = [];
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          list = parsed.filter(
-            (item: LocalRating) =>
-              item && typeof item === "object" && typeof item.reviewerId === "string"
-          );
+      let clientUuid = localStorage.getItem("reviewerBucket:anonymousClientId");
+      if (!clientUuid) {
+        clientUuid = crypto.randomUUID();
+        localStorage.setItem("reviewerBucket:anonymousClientId", clientUuid);
+      }
+
+      const res = await fetch(getApiUrl(`/api/reviewers/${reviewerId}/rating`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          value,
+          anonymousClientId: clientUuid
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Rating submission failed");
+      }
+
+      setLocalRating(value);
+
+      try {
+        const raw = localStorage.getItem("reviewerBucket:ratings");
+        let list: LocalRating[] = [];
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            list = parsed.filter(
+              (item: LocalRating) =>
+                item && typeof item === "object" && typeof item.reviewerId === "string"
+            );
+          }
+        }
+        const idx = list.findIndex((item) => item.reviewerId === reviewerId);
+        if (idx >= 0) {
+          list[idx] = {
+            reviewerId,
+            value,
+            updatedAt: new Date().toISOString()
+          };
+        } else {
+          list.push({
+            reviewerId,
+            value,
+            updatedAt: new Date().toISOString()
+          });
+        }
+        localStorage.setItem("reviewerBucket:ratings", JSON.stringify(list));
+      } catch {
+        // Ignore defensively
+      }
+
+      const summaryRes = await fetch(getApiUrl(`/api/reviewers/${reviewerId}/rating-summary`));
+      if (summaryRes.ok) {
+        const summaryJson = await summaryRes.json();
+        if (summaryJson && summaryJson.data) {
+          setAverageRating(summaryJson.data.averageRating);
+          setRatingCount(summaryJson.data.ratingCount);
         }
       }
-      const idx = list.findIndex((item) => item.reviewerId === reviewerId);
-      if (idx >= 0) {
-        list[idx] = {
-          ...list[idx],
-          value,
-          updatedAt: new Date().toISOString(),
-        };
-      } else {
-        list.push({
-          reviewerId,
-          value,
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      localStorage.setItem("reviewerBucket:ratings", JSON.stringify(list));
-    } catch {
-      // Ignore defensively
-    }
 
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      setShowNotice(true);
+      timerRef.current = setTimeout(() => {
+        setShowNotice(false);
+      }, 2000);
+    } catch {
+      setErrorMessage("Could not submit rating. Please try again.");
     }
-    setShowNotice(true);
-    timerRef.current = setTimeout(() => {
-      setShowNotice(false);
-    }, 2000);
   };
 
   if (!mounted) {
@@ -131,17 +170,7 @@ export default function ReviewerRatingSection({
     );
   }
 
-  const hasLocal = localRating !== undefined;
-  const displayCount = hasLocal ? initialRatingCount + 1 : initialRatingCount;
-  const displayAverage = hasLocal
-    ? (initialRatingCount > 0
-        ? (initialRatingTotal + localRating) / (initialRatingCount + 1)
-        : localRating)
-    : (initialRatingCount > 0
-        ? initialRatingTotal / initialRatingCount
-        : undefined);
-
-  const roundedAvg = displayAverage !== undefined ? Math.round(displayAverage) : 0;
+  const roundedAvg = averageRating !== null ? Math.round(averageRating) : 0;
 
   return (
     <div className="rounded-xl border border-border bg-surface p-5">
@@ -149,11 +178,11 @@ export default function ReviewerRatingSection({
         Student Rating
       </h2>
 
-      {displayAverage !== undefined ? (
+      {averageRating !== null ? (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-foreground tracking-tight">
-              {displayAverage.toFixed(1)}
+              {averageRating.toFixed(1)}
             </span>
             <span className="text-sm text-muted">/ 5</span>
           </div>
@@ -165,7 +194,7 @@ export default function ReviewerRatingSection({
           </div>
 
           <span className="text-xs text-secondary mt-1">
-            Based on {displayCount} {displayCount === 1 ? "rating" : "ratings"}
+            Based on {ratingCount} {ratingCount === 1 ? "rating" : "ratings"}
           </span>
         </div>
       ) : (
@@ -205,6 +234,9 @@ export default function ReviewerRatingSection({
             );
           })}
         </div>
+        {errorMessage && (
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400 font-semibold">{errorMessage}</p>
+        )}
       </div>
     </div>
   );

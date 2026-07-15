@@ -3,60 +3,122 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import { reviewers } from "@/app/data/reviewers";
-import { experiences } from "@/app/data/experiences";
-import { ratings } from "@/app/data/ratings";
 import ReviewerRatingSection from "@/app/components/ReviewerRatingSection";
 import StudentExperiencesFeed from "@/app/components/StudentExperiencesFeed";
+import { getApiUrl } from "@/app/utils/api";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return reviewers.map((r) => ({
-    slug: r.slug,
-  }));
+type BackendReviewer = {
+  id: string;
+  name: string;
+  code: string;
+  slug: string;
+  stacks: string[];
+};
+
+export async function generateStaticParams() {
+  try {
+    const res = await fetch(getApiUrl("/api/reviewers"));
+    if (res.ok) {
+      const json = await res.json();
+      if (json && Array.isArray(json.data)) {
+        return json.data.map((r: { slug: string }) => ({
+          slug: r.slug
+        }));
+      }
+    }
+  } catch {
+    // Return empty list
+  }
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const reviewer = reviewers.find((r) => r.slug === slug);
-  if (!reviewer) {
-    return {
-      title: "Reviewer Not Found | Reviewer Bucket",
-    };
+  try {
+    const res = await fetch(getApiUrl(`/api/reviewers/${slug}`));
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data) {
+        const reviewer: BackendReviewer = json.data;
+        return {
+          title: `${reviewer.name} (${reviewer.code}) | Reviewer Bucket`,
+          description: `Lookup reviewer codes and details for Brocamp and Brototype reviewer ${reviewer.name} (${reviewer.code}) on Reviewer Bucket.`
+        };
+      }
+    }
+  } catch {
+    // Fall back to default
   }
   return {
-    title: `${reviewer.name} (${reviewer.code}) | Reviewer Bucket`,
-    description: `Lookup reviewer codes and details for Brocamp and Brototype reviewer ${reviewer.name} (${reviewer.code}) on Reviewer Bucket.`,
+    title: "Reviewer Details | Reviewer Bucket"
   };
 }
 
 export default async function ReviewerDetailPage({ params }: Props) {
   const { slug } = await params;
-  const reviewer = reviewers.find((r) => r.slug === slug);
+
+  let reviewer: BackendReviewer | null = null;
+  try {
+    const res = await fetch(getApiUrl(`/api/reviewers/${slug}`), { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data) {
+        reviewer = json.data;
+      }
+    }
+  } catch {
+    // Fall back to null
+  }
 
   if (!reviewer) {
     notFound();
   }
 
-  const approved = experiences.filter(
-    (exp) => exp.reviewerId === reviewer.id && exp.status === "approved"
-  );
+  let averageRating: number | null = null;
+  let ratingCount = 0;
+  try {
+    const ratingRes = await fetch(getApiUrl(`/api/reviewers/${reviewer.id}/rating-summary`), {
+      cache: "no-store"
+    });
+    if (ratingRes.ok) {
+      const ratingJson = await ratingRes.json();
+      if (ratingJson && ratingJson.data) {
+        averageRating = ratingJson.data.averageRating;
+        ratingCount = ratingJson.data.ratingCount;
+      }
+    }
+  } catch {
+    // Fall back to defaults
+  }
 
-  const sortedApproved = [...approved].sort((a, b) => {
-    const timeA = new Date(a.createdAt).getTime();
-    const timeB = new Date(b.createdAt).getTime();
-    return (isNaN(timeA) ? 0 : timeA) - (isNaN(timeB) ? 0 : timeB);
-  });
+  type BackendExperience = {
+    id: string;
+    content: string;
+    createdAt: string;
+  };
 
-  const reviewerRatings = ratings.filter(
-    (r) => r.reviewerId === reviewer.id && Number.isInteger(r.value) && r.value >= 1 && r.value <= 5
-  );
-
-  const ratingCount = reviewerRatings.length;
-  const ratingTotal = reviewerRatings.reduce((sum, r) => sum + r.value, 0);
+  let initialExperiences: BackendExperience[] = [];
+  let initialNextCursor: string | null = null;
+  let initialHasMore = false;
+  try {
+    const expRes = await fetch(getApiUrl(`/api/reviewers/${reviewer.id}/experiences`), {
+      cache: "no-store"
+    });
+    if (expRes.ok) {
+      const expJson = await expRes.json();
+      if (expJson && expJson.data) {
+        initialExperiences = expJson.data.experiences || [];
+        initialNextCursor = expJson.data.nextCursor || null;
+        initialHasMore = expJson.data.hasMore || false;
+      }
+    }
+  } catch {
+    // Fall back to empty
+  }
 
   return (
     <>
@@ -124,14 +186,16 @@ export default async function ReviewerDetailPage({ params }: Props) {
 
             <ReviewerRatingSection
               reviewerId={reviewer.id}
+              initialAverageRating={averageRating}
               initialRatingCount={ratingCount}
-              initialRatingTotal={ratingTotal}
             />
 
             <div className="border-t border-border pt-8 mt-2">
               <StudentExperiencesFeed
                 reviewerId={reviewer.id}
-                initialExperiences={sortedApproved}
+                initialExperiences={initialExperiences}
+                initialNextCursor={initialNextCursor}
+                initialHasMore={initialHasMore}
               />
             </div>
           </div>

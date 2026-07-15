@@ -1,11 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { StudentExperience } from "@/app/data/experiences";
+import { getApiUrl } from "@/app/utils/api";
+
+type StudentExperience = {
+  id: string;
+  content: string;
+  createdAt: string;
+};
 
 type StudentExperiencesFeedProps = {
   reviewerId: string;
   initialExperiences: StudentExperience[];
+  initialNextCursor: string | null;
+  initialHasMore: boolean;
 };
 
 function formatMonthYear(dateString: string): string {
@@ -19,21 +27,21 @@ function formatMonthYear(dateString: string): string {
       });
 }
 
-const generateTempId = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
 export default function StudentExperiencesFeed({
   reviewerId,
-  initialExperiences
+  initialExperiences,
+  initialNextCursor,
+  initialHasMore
 }: StudentExperiencesFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [experiencesList, setExperiencesList] = useState<StudentExperience[]>(initialExperiences);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
+  const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -41,10 +49,35 @@ export default function StudentExperiencesFeed({
     }
   }, []);
 
-  const handleSubmit = (e?: React.SyntheticEvent) => {
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !nextCursor) return;
+    setIsLoadingMore(true);
+
+    try {
+      const url = getApiUrl(`/api/reviewers/${reviewerId}/experiences?limit=20&cursor=${nextCursor}`);
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data) {
+          const fetched: StudentExperience[] = json.data.experiences || [];
+          setExperiencesList((prev) => [...fetched, ...prev]);
+          setNextCursor(json.data.nextCursor || null);
+          setHasMore(json.data.hasMore || false);
+        }
+      }
+    } catch {
+      // Ignore defensively
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  const handleSubmit = async (e?: React.SyntheticEvent) => {
     if (e) {
       e.preventDefault();
     }
+    if (isSubmitting) return;
+
     const trimmed = inputText.trim();
 
     if (trimmed.length < 2) {
@@ -57,26 +90,36 @@ export default function StudentExperiencesFeed({
       return;
     }
 
-    const newExp: StudentExperience = {
-      id: generateTempId(),
-      reviewerId,
-      content: trimmed,
-      status: "approved",
-      createdAt: new Date().toISOString()
-    };
-
-    setExperiencesList((prev) => [...prev, newExp]);
-    setInputText("");
+    setIsSubmitting(true);
     setError("");
+    setSubmitSuccess(false);
 
-    setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({
-          top: scrollRef.current.scrollHeight,
-          behavior: "smooth"
-        });
+    try {
+      const res = await fetch(getApiUrl(`/api/reviewers/${reviewerId}/experiences`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: trimmed
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Submission failed");
       }
-    }, 50);
+
+      setInputText("");
+      setSubmitSuccess(true);
+      const timer = setTimeout(() => {
+        setSubmitSuccess(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    } catch {
+      setError("Failed to submit experience. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -102,6 +145,19 @@ export default function StudentExperiencesFeed({
           ref={scrollRef}
           className="overflow-y-auto p-4 sm:p-5 flex flex-col gap-4 max-h-[380px] sm:max-h-[480px] scroll-smooth"
         >
+          {hasMore && (
+            <div className="flex justify-center pb-2 border-b border-border/40">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="text-[11px] text-secondary font-semibold px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              >
+                {isLoadingMore ? "Loading..." : "Load older experiences"}
+              </button>
+            </div>
+          )}
+
           {experiencesList.length > 0 ? (
             experiencesList.map((exp, idx) => (
               <div key={exp.id}>
@@ -152,12 +208,18 @@ export default function StudentExperiencesFeed({
                 </span>
                 <button
                   type="submit"
-                  className="h-8 px-4 rounded-lg bg-accent text-background text-xs font-bold border border-accent hover:opacity-90 transition-opacity duration-150 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+                  disabled={isSubmitting}
+                  className="h-8 px-4 rounded-lg bg-accent text-background text-xs font-bold border border-accent hover:opacity-90 transition-opacity duration-150 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-50"
                 >
-                  Post
+                  {isSubmitting ? "Posting..." : "Post"}
                 </button>
               </div>
             </div>
+            {submitSuccess && (
+              <p className="text-xs text-green-600 dark:text-green-400 font-semibold">
+                Experience submitted for review.
+              </p>
+            )}
             {error && (
               <p className="text-xs text-red-600 dark:text-red-400 font-semibold">{error}</p>
             )}

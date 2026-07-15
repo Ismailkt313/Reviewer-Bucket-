@@ -8,7 +8,12 @@ export default function Header() {
         <Link href="/" className="text-base font-semibold tracking-tight text-foreground">
           Reviewer Bucket
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-4">
+          <Link href="/community" className="text-sm font-medium text-secondary hover:text-foreground transition-colors">
+            Community
+          </Link>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
