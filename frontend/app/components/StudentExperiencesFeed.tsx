@@ -38,11 +38,11 @@ function getRelativeTime(dateString: string): string {
 
 function CommentSkeleton() {
   return (
-    <div className="flex gap-3 items-start animate-skeleton-pulse">
-      <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex-shrink-0" />
-      <div className="flex-1 space-y-2 py-1">
-        <div className="h-3 w-16 bg-neutral-100 dark:bg-neutral-800 rounded" />
-        <div className="h-4 w-full bg-neutral-100 dark:bg-neutral-800 rounded" />
+    <div className="flex gap-2 items-start animate-skeleton-pulse">
+      <div className="w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 flex-shrink-0" />
+      <div className="flex-1 space-y-1.5 py-0.5">
+        <div className="h-3 w-14 bg-neutral-100 dark:bg-neutral-800 rounded" />
+        <div className="h-3.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded" />
       </div>
     </div>
   );
@@ -57,6 +57,10 @@ export default function StudentExperiencesFeed({
 }: StudentExperiencesFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollTracker = useRef({ lastY: 0, cumulativeUp: 0 });
+  const isUserScrollingRef = useRef(false);
+  const shouldScrollToBottomRef = useRef(false);
+
   const [experiencesList, setExperiencesList] = useState<StudentExperience[]>(initialExperiences);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
@@ -91,13 +95,91 @@ export default function StudentExperiencesFeed({
     }
   }, []);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+  // Collapse profile card on scroll (existing behavior)
+  const handleContainerScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     if (onCollapsedChange) {
       onCollapsedChange(scrollTop > 180);
     }
   }, [onCollapsedChange]);
 
+  // ──────────────────────────────────────────────
+  // Community-page scroll/keyboard handling
+  // Blur textarea when scrolling up to dismiss keyboard stably
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const currentY = el.scrollTop;
+      const tracker = scrollTracker.current;
+      const delta = currentY - tracker.lastY;
+
+      if (delta < 0 && isUserScrollingRef.current) {
+        tracker.cumulativeUp += Math.abs(delta);
+
+        if (
+          tracker.cumulativeUp >= 30 &&
+          textareaRef.current &&
+          document.activeElement === textareaRef.current
+        ) {
+          const savedScrollTop = el.scrollTop;
+          textareaRef.current.blur();
+          requestAnimationFrame(() => {
+            el.scrollTop = savedScrollTop;
+          });
+          tracker.cumulativeUp = 0;
+        }
+      } else {
+        tracker.cumulativeUp = 0;
+      }
+
+      tracker.lastY = currentY;
+    };
+
+    const handleTouchStart = () => {
+      isUserScrollingRef.current = true;
+    };
+
+    const handleTouchEnd = () => {
+      setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 800);
+    };
+
+    const handleWheel = () => {
+      isUserScrollingRef.current = true;
+      setTimeout(() => {
+        isUserScrollingRef.current = false;
+      }, 800);
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchStart, { passive: true });
+    el.addEventListener("touchend", handleTouchEnd, { passive: true });
+    el.addEventListener("wheel", handleWheel, { passive: true });
+
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchStart);
+      el.removeEventListener("touchend", handleTouchEnd);
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
+  // Scroll to bottom when own message is sent
+  useEffect(() => {
+    if (shouldScrollToBottomRef.current) {
+      isUserScrollingRef.current = false;
+      scrollToBottom("smooth");
+      shouldScrollToBottomRef.current = false;
+    }
+  }, [experiencesList, scrollToBottom]);
+
+  // Initial scroll to bottom
   useEffect(() => {
     const timer = setTimeout(() => {
       if (scrollRef.current) {
@@ -218,6 +300,7 @@ export default function StudentExperiencesFeed({
         textareaRef.current.style.height = "auto";
         textareaRef.current.focus();
       }
+      shouldScrollToBottomRef.current = true;
     } catch {
       setError("Failed to submit experience. Please try again.");
     } finally {
@@ -225,35 +308,47 @@ export default function StudentExperiencesFeed({
     }
   };
 
-  const handleSendMouseDown = (e: React.MouseEvent) => {
+  const handleSendMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     handleSubmit();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputText, isSubmitting]);
 
-  const handleSendTouchStart = (e: React.TouchEvent) => {
+  const handleSendTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
     handleSubmit();
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputText, isSubmitting]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputText, isSubmitting]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 border border-border bg-surface rounded-2xl overflow-clip relative">
-      <div className="px-3 py-2 md:px-4 md:py-3 border-b border-border/60 bg-neutral-50/50 dark:bg-neutral-900/30 flex items-center justify-between flex-shrink-0">
-        <h2 className="text-xs font-extrabold tracking-wider uppercase text-secondary">
+      {/* Header bar */}
+      <div className="px-3 py-1.5 md:px-4 md:py-2 border-b border-border/60 bg-neutral-50/50 dark:bg-neutral-900/30 flex items-center justify-between flex-shrink-0">
+        <h2 className="text-[10px] md:text-xs font-extrabold tracking-wider uppercase text-secondary">
           Student Experiences
         </h2>
-        <span className="inline-flex items-center rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-xs font-bold text-secondary">
+        <span className="inline-flex items-center rounded-md bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[10px] md:text-xs font-bold text-secondary">
           {experiencesList.length}
         </span>
       </div>
 
+      {/* Scrollable feed area */}
       <div
         ref={scrollRef}
-        onScroll={handleScroll}
+        onScroll={handleContainerScroll}
         className={`flex-1 overflow-y-auto scroll-smooth overscroll-contain min-h-0 transition-opacity duration-150 ${isReady ? "opacity-100" : "opacity-0"}`}
       >
-        <div className="min-h-full flex flex-col p-4 gap-4">
+        <div className="min-h-full flex flex-col px-3 py-2.5 md:px-4 md:py-3 gap-1.5 md:gap-2">
           {hasMore && (
-            <div className="flex justify-center pb-2 border-b border-border/40 flex-shrink-0">
+            <div className="flex justify-center pb-1.5 border-b border-border/40 flex-shrink-0">
               <button
                 type="button"
                 onClick={handleLoadMore}
@@ -266,7 +361,7 @@ export default function StudentExperiencesFeed({
           )}
 
           {isLoadingMore && (
-            <div className="flex flex-col gap-4 flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0">
               <CommentSkeleton />
               <CommentSkeleton />
               <CommentSkeleton />
@@ -274,26 +369,26 @@ export default function StudentExperiencesFeed({
           )}
 
           {experiencesList.length > 0 ? (
-            <div className="flex flex-col gap-2 md:gap-3">
+            <div className="flex flex-col gap-1 md:gap-1.5">
               {experiencesList.map((exp) => (
                 <div
                   key={exp.id}
                   itemProp="review"
                   itemScope
                   itemType="https://schema.org/Review"
-                  className="flex gap-2 md:gap-3 items-start text-sm bg-background/40 hover:bg-background/80 p-2 md:p-2.5 rounded-lg md:rounded-xl border border-border/40 transition-colors duration-150 animate-slide-up-fade"
+                  className="flex gap-2 items-start text-sm bg-background/40 hover:bg-background/70 p-2 md:p-2.5 rounded-xl border border-border/30 transition-colors duration-150"
                 >
                   <meta itemProp="datePublished" content={exp.createdAt} />
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[10px] md:text-xs font-bold text-muted shadow-xs select-none">
+                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[9px] md:text-[10px] font-bold text-muted select-none">
                     A
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span 
-                        itemProp="author" 
-                        itemScope 
-                        itemType="https://schema.org/Person" 
-                        className="font-bold text-foreground text-[11px] md:text-xs"
+                      <span
+                        itemProp="author"
+                        itemScope
+                        itemType="https://schema.org/Person"
+                        className="font-bold text-foreground text-[10px] md:text-[11px]"
                       >
                         <span itemProp="name">Anonymous Student</span>
                       </span>
@@ -301,7 +396,7 @@ export default function StudentExperiencesFeed({
                         {getRelativeTime(exp.createdAt)}
                       </span>
                     </div>
-                    <p itemProp="reviewBody" className="mt-0.5 text-xs md:text-sm text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                    <p itemProp="reviewBody" className="mt-0.5 text-[12px] md:text-[13px] text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {exp.content}
                     </p>
                   </div>
@@ -309,42 +404,36 @@ export default function StudentExperiencesFeed({
               ))}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
-              <div className="text-4xl text-neutral-300 dark:text-neutral-700">
-                <MessageSquare className="w-10 h-10" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-foreground">
-                  Be the first to share your experience
+            /* Compact empty state — no large blank gap */
+            <div className="flex flex-col items-center justify-end text-center py-6 gap-2 select-none mt-auto">
+              <MessageSquare className="w-7 h-7 text-neutral-300 dark:text-neutral-700" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground">
+                  No experiences yet
                 </p>
-                <p className="text-xs text-muted max-w-[280px]">
-                  Help future students by sharing your interview process and questions.
+                <p className="text-[11px] text-muted max-w-[240px]">
+                  Be the first student to share your interview experience.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => textareaRef.current?.focus()}
-                className="mt-2 text-xs font-bold text-background bg-accent px-4 py-2 rounded-lg border border-accent hover:opacity-90 transition-opacity min-h-[44px]"
-              >
-                Write Experience
-              </button>
             </div>
           )}
         </div>
       </div>
 
+      {/* Unread indicator */}
       {unreadCount > 0 && (
         <button
           type="button"
           onClick={() => scrollToBottom("smooth")}
-          className="absolute bottom-18 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent text-background text-[11px] font-bold shadow-lg hover:scale-105 transition-transform duration-150 border border-accent"
+          className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-3 py-1 rounded-full bg-accent text-background text-[11px] font-bold shadow-lg hover:scale-105 transition-transform duration-150 motion-reduce:transition-none border border-accent"
         >
-          <ArrowDown className="w-3.5 h-3.5" />
+          <ArrowDown className="w-3 h-3" />
           <span>{unreadCount} New {unreadCount === 1 ? "Experience" : "Experiences"}</span>
         </button>
       )}
 
-      <div className="border-t border-border/60 bg-surface/95 backdrop-blur-xs px-3 pt-2 pb-[calc(8px+env(safe-area-inset-bottom,0px))] flex flex-col gap-1.5 relative flex-shrink-0 shadow-[0_-1px_3px_rgba(0,0,0,0.04)]">
+      {/* Composer — always pinned at bottom */}
+      <div className="border-t border-border/60 bg-surface/95 backdrop-blur-xs px-3 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom,0px))] flex flex-col gap-1 relative flex-shrink-0 shadow-[0_-1px_2px_rgba(0,0,0,0.03)]">
         <form onSubmit={handleSubmit} className="flex gap-2 items-center">
           <label htmlFor="feed-input" className="sr-only">
             Share your experience
@@ -359,10 +448,11 @@ export default function StudentExperiencesFeed({
               setError("");
               requestAnimationFrame(adjustTextareaHeight);
             }}
+            onKeyDown={handleKeyDown}
             placeholder="Share your experience..."
             maxLength={1000}
             rows={1}
-            className="flex-1 rounded-2xl border border-border/60 bg-background px-3.5 py-2 text-[16px] text-foreground placeholder:text-muted focus:border-neutral-400 focus:ring-2 focus:ring-focus/15 focus:outline-none dark:focus:border-neutral-500 resize-none min-h-[40px] max-h-[120px] overflow-y-auto transition-[height] duration-150 ease-out"
+            className="flex-1 rounded-2xl border border-border/60 bg-background px-3.5 py-2 text-[16px] text-foreground placeholder:text-muted focus:border-neutral-400 focus:ring-2 focus:ring-focus/15 focus:outline-none dark:focus:border-neutral-500 resize-none min-h-[38px] max-h-[120px] overflow-y-auto transition-[height] duration-150 ease-out"
           />
 
           <button
@@ -370,13 +460,13 @@ export default function StudentExperiencesFeed({
             disabled={isSubmitting || !inputText.trim()}
             onMouseDown={handleSendMouseDown}
             onTouchStart={handleSendTouchStart}
-            className="flex-shrink-0 w-10 h-10 rounded-full bg-accent text-background flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            className="flex-shrink-0 w-9 h-9 rounded-full bg-accent text-background flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
             aria-label="Send experience"
           >
             {isSubmitting ? (
               <span className="w-4 h-4 border-2 border-background/40 border-t-background rounded-full animate-spin" />
             ) : (
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>

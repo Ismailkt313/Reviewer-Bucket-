@@ -145,30 +145,6 @@ export default async function ReviewerDetailPage({ params }: Props) {
     // Ignore
   }
 
-  // Fetch all reviewers to calculate related reviewers of the same stack
-  let relatedReviewers: BackendReviewer[] = [];
-  try {
-    const allRes = await fetch(getApiUrl("/api/reviewers"), { cache: "no-store" });
-    if (allRes.ok) {
-      const allJson = await allRes.json();
-      if (allJson && Array.isArray(allJson.data)) {
-        const list: BackendReviewer[] = allJson.data;
-        const currentStacks = reviewer.stacks || [];
-        
-        // Filter: same stack overlaps, excluding the current reviewer
-        relatedReviewers = list
-          .filter(r => r.id !== reviewer!.id)
-          .filter(r => {
-            const rStacks = r.stacks || [];
-            return rStacks.some(s => currentStacks.includes(s));
-          })
-          .slice(0, 5); // Limit to 5 related items
-      }
-    }
-  } catch {
-    // Fall back to empty
-  }
-
   const pageUrl = `${siteConfig.url}/reviewers/${slug}`;
   const stackName = reviewer.stacks.join(", ") || "General Stack";
 
@@ -293,7 +269,6 @@ export default async function ReviewerDetailPage({ params }: Props) {
         initialExperiences={initialExperiences}
         initialNextCursor={initialNextCursor}
         initialHasMore={initialHasMore}
-        relatedReviewers={relatedReviewers}
       />
     </>
   );

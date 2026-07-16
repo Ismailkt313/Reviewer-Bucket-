@@ -25,13 +25,6 @@ type ReviewerDetailWrapperProps = {
   }[];
   initialNextCursor: string | null;
   initialHasMore: boolean;
-  relatedReviewers: {
-    id: string;
-    name: string;
-    code: string;
-    slug: string;
-    stacks: string[];
-  }[];
 };
 
 export default function ReviewerDetailWrapper({
@@ -41,7 +34,6 @@ export default function ReviewerDetailWrapper({
   initialExperiences,
   initialNextCursor,
   initialHasMore,
-  relatedReviewers
 }: ReviewerDetailWrapperProps) {
   const [currentReviewer, setCurrentReviewer] = useState(reviewer);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,7 +67,7 @@ export default function ReviewerDetailWrapper({
   return (
     <div
       id="detail-page-container"
-      className="fixed top-0 left-0 w-full flex flex-col overflow-hidden bg-background text-foreground animate-in fade-in duration-200"
+      className="fixed top-0 left-0 w-full flex flex-col overflow-hidden bg-background text-foreground"
       style={{
         height: "var(--visual-viewport-height, 100dvh)",
         transform: "translateY(var(--visual-viewport-offset-top, 0px))"
@@ -84,7 +76,8 @@ export default function ReviewerDetailWrapper({
       <div className="flex-shrink-0">
         <Header />
       </div>
-      <div className="mx-auto max-w-3xl px-4 py-1 md:py-3 flex-1 min-h-0 flex flex-col w-full relative">
+      <div className="mx-auto max-w-3xl px-4 py-1 md:py-2 flex-1 min-h-0 flex flex-col w-full relative">
+        {/* Mobile collapsed header bar */}
         <div
           onClick={() => isMobile && setIsCollapsed(prev => !prev)}
           className="md:hidden flex-shrink-0 flex items-center gap-3 px-4 h-12 border border-border bg-surface rounded-xl cursor-pointer select-none mb-1"
@@ -111,7 +104,8 @@ export default function ReviewerDetailWrapper({
           </div>
         </div>
 
-        <div className={`transition-all duration-300 ease-in-out origin-top flex-shrink-0 ${resolvedCollapsed ? "max-h-0 opacity-0 -translate-y-4 scale-95 pointer-events-none overflow-hidden pb-0" : "max-h-[350px] opacity-100 translate-y-0 scale-100 pb-4"}`}>
+        {/* Reviewer profile/rating section (collapsible on mobile) */}
+        <div className={`transition-all duration-300 ease-in-out origin-top flex-shrink-0 ${resolvedCollapsed ? "max-h-0 opacity-0 -translate-y-4 scale-95 pointer-events-none overflow-hidden pb-0" : "max-h-[350px] opacity-100 translate-y-0 scale-100 pb-2"}`}>
           <ReviewerRatingSection
             reviewerId={currentReviewer.id}
             reviewerName={currentReviewer.name}
@@ -124,6 +118,7 @@ export default function ReviewerDetailWrapper({
           />
         </div>
 
+        {/* Student experiences feed — primary content */}
         <div className="flex-1 min-h-0 flex flex-col">
           <StudentExperiencesFeed
             key={currentReviewer.id}
@@ -134,26 +129,6 @@ export default function ReviewerDetailWrapper({
             onCollapsedChange={handleCollapsedChange}
           />
         </div>
-
-        {relatedReviewers && relatedReviewers.length > 0 && (
-          <section className="mt-2 flex-shrink-0 bg-surface border border-border rounded-2xl p-4 select-none mb-1">
-            <h3 className="text-xs font-extrabold tracking-wider uppercase text-secondary mb-2.5">
-              Related Reviewers
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {relatedReviewers.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/reviewers/${r.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-bold text-secondary hover:text-foreground hover:border-neutral-450 dark:hover:border-neutral-550 transition-colors"
-                >
-                  <span>{r.name}</span>
-                  <span className="font-mono text-[9px] opacity-70">({r.code})</span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
 
       <AddReviewerModal
