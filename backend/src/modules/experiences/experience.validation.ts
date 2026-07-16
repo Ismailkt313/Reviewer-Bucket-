@@ -15,6 +15,7 @@ const getExperiencesQuerySchema = z.object({
 export function validateReviewerId(req: Request, _res: Response, next: NextFunction): void {
   const { reviewerId } = req.params;
   if (!Types.ObjectId.isValid(reviewerId)) {
+    console.error(`[EXPERIENCE_VALIDATION] [FAIL] Invalid reviewerId format: "${reviewerId}"`);
     return next(new AppError(400, "Invalid reviewer ID format"));
   }
   next();
@@ -23,6 +24,7 @@ export function validateReviewerId(req: Request, _res: Response, next: NextFunct
 export function validatePostExperience(req: Request, _res: Response, next: NextFunction): void {
   const result = postExperienceSchema.safeParse(req.body);
   if (!result.success) {
+    console.error(`[EXPERIENCE_VALIDATION] [FAIL] Body validation failed for payload:`, req.body, `Errors:`, result.error.errors);
     return next(new AppError(400, "Invalid experience request payload"));
   }
   req.body = result.data;
@@ -32,6 +34,7 @@ export function validatePostExperience(req: Request, _res: Response, next: NextF
 export function validateGetExperiencesQuery(req: Request, _res: Response, next: NextFunction): void {
   const result = getExperiencesQuerySchema.safeParse(req.query);
   if (!result.success) {
+    console.error(`[EXPERIENCE_VALIDATION] [FAIL] Query validation failed for query:`, req.query, `Errors:`, result.error.errors);
     return next(new AppError(400, "Invalid query parameters"));
   }
   req.query = result.data as unknown as Request["query"];

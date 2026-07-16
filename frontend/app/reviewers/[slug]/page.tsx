@@ -111,10 +111,16 @@ export default async function ReviewerDetailPage({ params }: Props) {
 
   let averageRating: number | null = null;
   let ratingCount = 0;
+  let initialExperiences: BackendExperience[] = [];
+  let initialNextCursor: string | null = null;
+  let initialHasMore = false;
+
   try {
-    const ratingRes = await fetch(getApiUrl(`/api/reviewers/${reviewer.id}/rating-summary`), {
-      cache: "no-store"
-    });
+    const [ratingRes, expRes] = await Promise.all([
+      fetch(getApiUrl(`/api/reviewers/${reviewer.id}/rating-summary`), { cache: "no-store" }),
+      fetch(getApiUrl(`/api/reviewers/${reviewer.id}/experiences`), { cache: "no-store" })
+    ]);
+
     if (ratingRes.ok) {
       const ratingJson = await ratingRes.json();
       if (ratingJson && ratingJson.data) {
@@ -122,17 +128,7 @@ export default async function ReviewerDetailPage({ params }: Props) {
         ratingCount = ratingJson.data.ratingCount;
       }
     }
-  } catch {
-    // Ignore
-  }
 
-  let initialExperiences: BackendExperience[] = [];
-  let initialNextCursor: string | null = null;
-  let initialHasMore = false;
-  try {
-    const expRes = await fetch(getApiUrl(`/api/reviewers/${reviewer.id}/experiences`), {
-      cache: "no-store"
-    });
     if (expRes.ok) {
       const expJson = await expRes.json();
       if (expJson && expJson.data) {

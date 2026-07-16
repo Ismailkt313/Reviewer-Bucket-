@@ -13,12 +13,6 @@ type ReviewerExplorerProps = {
   reviewers: Reviewer[];
 };
 
-type ReviewerStats = {
-  averageRating: number | null;
-  ratingCount: number;
-  experienceCount: number;
-  lastUpdated: string | null;
-};
 
 const INITIAL_STACKS = ["All", "MERN", "Flutter", "AI/ML", "Python"];
 const MORE_STACKS = [
@@ -74,11 +68,17 @@ function ReviewerCardSkeleton() {
 export default function ReviewerExplorer({ reviewers: initialReviewers }: ReviewerExplorerProps) {
   const [reviewers, setReviewers] = useState<Reviewer[]>(initialReviewers);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedStack, setSelectedStack] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [statsMap, setStatsMap] = useState<Record<string, ReviewerStats>>({});
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [query]);
 
   // Progressive rendering count
   const [visibleCount, setVisibleCount] = useState(8);
@@ -128,61 +128,6 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
   const isAddParamOpen = searchParams.get("add") === "true";
   const finalIsModalOpen = isModalOpen || isAddParamOpen;
 
-  // Load stats from API
-  useEffect(() => {
-    const loadStats = async () => {
-      setIsStatsLoading(true);
-      const newStats: Record<string, ReviewerStats> = {};
-
-      try {
-        await Promise.all(
-          reviewers.map(async (r) => {
-            let averageRating: number | null = null;
-            let ratingCount = 0;
-            let experienceCount = 0;
-            let lastUpdated: string | null = null;
-
-            try {
-              const ratingRes = await fetch(getApiUrl(`/api/reviewers/${r.id}/rating-summary`));
-              if (ratingRes.ok) {
-                const ratingJson = await ratingRes.json();
-                if (ratingJson?.data) {
-                  averageRating = ratingJson.data.averageRating;
-                  ratingCount = ratingJson.data.ratingCount;
-                }
-              }
-            } catch {}
-
-            try {
-              const expRes = await fetch(getApiUrl(`/api/reviewers/${r.id}/experiences`));
-              if (expRes.ok) {
-                const expJson = await expRes.json();
-                if (expJson?.data) {
-                  experienceCount = expJson.data.experiences?.length || 0;
-                  if (expJson.data.experiences && expJson.data.experiences.length > 0) {
-                    lastUpdated = expJson.data.experiences[0].createdAt;
-                  }
-                }
-              }
-            } catch {}
-
-            newStats[r.id] = {
-              averageRating,
-              ratingCount,
-              experienceCount,
-              lastUpdated
-            };
-          })
-        );
-      } catch {}
-
-      setStatsMap(newStats);
-      setIsStatsLoading(false);
-    };
-
-    loadStats();
-  }, [reviewers]);
-
   // Keydown event listener for Escape closing popover
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -198,11 +143,11 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
   // Filtering
   const filtered = useMemo(() => {
     return reviewers.filter((r) => {
-      const matchesSearch = matchesReviewer(r, query);
+      const matchesSearch = matchesReviewer(r, debouncedQuery);
       const matchesStack = selectedStack === "All" || r.stacks.includes(selectedStack);
       return matchesSearch && matchesStack;
     });
-  }, [reviewers, query, selectedStack]);
+  }, [reviewers, debouncedQuery, selectedStack]);
 
   // Default sorting to alphabetical by name
   const sortedReviewers = useMemo(() => {
@@ -222,7 +167,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
   // Aggregate Stats
   const aggregateStats = useMemo(() => {
     const totalReviewers = reviewers.length;
-    const totalExperiences = Object.values(statsMap).reduce((sum, s) => sum + s.experienceCount, 0);
+    const totalExperiences = reviewers.reduce((sum, r) => sum + (r.stats?.experienceCount || 0), 0);
     const totalStacks = new Set(reviewers.flatMap((r) => r.stacks)).size;
 
     return {
@@ -230,7 +175,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
       totalExperiences,
       totalStacks
     };
-  }, [reviewers, statsMap]);
+  }, [reviewers]);
 
   const handleAddSuccess = (newReviewer: {
     id: string;
@@ -432,13 +377,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
           </div>
 
           {/* Cards Grid */}
-          {isStatsLoading ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <ReviewerCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : sortedReviewers.length > 0 ? (
+          {sortedReviewers.length > 0 ? (
             <>
               <div
                 role="list"
@@ -448,7 +387,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                   <div key={reviewer.id} className="animate-slide-up-fade">
                     <ReviewerCard
                       reviewer={reviewer}
-                      stats={statsMap[reviewer.id]}
+                      stats={reviewer.stats}
                     />
                   </div>
                 ))}

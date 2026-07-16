@@ -37,4 +37,6 @@ const reviewerSchema = new Schema<IReviewerDoc>(
   }
 );
 
+reviewerSchema.index({ name: 1 });
+
 export const ReviewerModel = model<IReviewerDoc>("Reviewer", reviewerSchema);

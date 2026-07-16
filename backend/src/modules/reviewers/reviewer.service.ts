@@ -9,6 +9,10 @@ export class ReviewerService {
     return await this.reviewerRepository.findAll();
   }
 
+  async getAllReviewersWithStats(): Promise<any[]> {
+    return await this.reviewerRepository.findAllWithStats();
+  }
+
   async getReviewerBySlug(slug: string): Promise<IReviewer> {
     const reviewer = await this.reviewerRepository.findBySlug(slug);
     if (!reviewer) {

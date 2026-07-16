@@ -6,8 +6,7 @@ const experienceSchema = new Schema<IExperienceDoc>(
     reviewerId: {
       type: Schema.Types.ObjectId,
       ref: "Reviewer",
-      required: true,
-      index: true
+      required: true
     },
     content: {
       type: String,
@@ -21,5 +20,7 @@ const experienceSchema = new Schema<IExperienceDoc>(
     timestamps: true
   }
 );
+
+experienceSchema.index({ reviewerId: 1, createdAt: -1, _id: -1 });
 
 export const ExperienceModel = model<IExperienceDoc>("Experience", experienceSchema);

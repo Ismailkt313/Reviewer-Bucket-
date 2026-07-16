@@ -261,11 +261,13 @@ export default function StudentExperiencesFeed({
     }
   };
 
+  const submittingRef = useRef(false);
+
   const handleSubmit = async (e?: React.SyntheticEvent) => {
     if (e) {
       e.preventDefault();
     }
-    if (isSubmitting) return;
+    if (submittingRef.current || isSubmitting) return;
 
     const trimmed = inputText.trim();
     if (trimmed.length < 2) {
@@ -277,8 +279,12 @@ export default function StudentExperiencesFeed({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     setError("");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout limit
 
     try {
       const res = await fetch(getApiUrl(`/api/reviewers/${reviewerId}/experiences`), {
@@ -288,8 +294,11 @@ export default function StudentExperiencesFeed({
         },
         body: JSON.stringify({
           content: trimmed
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error("Submission failed");
@@ -301,24 +310,18 @@ export default function StudentExperiencesFeed({
         textareaRef.current.focus();
       }
       shouldScrollToBottomRef.current = true;
-    } catch {
-      setError("Failed to submit experience. Please try again.");
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setError("Request timed out. Please check your connection and try again.");
+      } else {
+        setError("Failed to submit experience. Please try again.");
+      }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
-
-  const handleSendMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputText, isSubmitting]);
-
-  const handleSendTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputText, isSubmitting]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -458,8 +461,7 @@ export default function StudentExperiencesFeed({
           <button
             type="submit"
             disabled={isSubmitting || !inputText.trim()}
-            onMouseDown={handleSendMouseDown}
-            onTouchStart={handleSendTouchStart}
+            onMouseDown={(e) => e.preventDefault()}
             className="flex-shrink-0 w-9 h-9 rounded-full bg-accent text-background flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
             aria-label="Send experience"
           >
@@ -474,7 +476,16 @@ export default function StudentExperiencesFeed({
           </button>
         </form>
         {error && (
-          <p className="text-[11px] text-red-650 dark:text-red-400 font-semibold px-1">{error}</p>
+          <div className="flex items-center justify-between gap-2 bg-red-50/70 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/40 rounded-xl px-3 py-1.5 text-[11px] text-red-650 dark:text-red-400">
+            <span className="font-semibold">{error}</span>
+            <button
+              type="button"
+              onClick={() => handleSubmit()}
+              className="flex-shrink-0 bg-red-650 text-white dark:bg-red-900 dark:text-red-100 px-2.5 py-1 rounded-lg font-bold hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
+          </div>
         )}
       </div>
     </div>
