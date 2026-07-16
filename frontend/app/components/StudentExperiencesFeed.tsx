@@ -244,7 +244,7 @@ export default function StudentExperiencesFeed({
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0 border border-border bg-surface rounded-2xl overflow-hidden relative">
+    <div className="flex flex-col flex-1 min-h-0 border border-border bg-surface rounded-2xl overflow-clip relative">
       <div className="px-4 py-3 border-b border-border/60 bg-neutral-50/50 dark:bg-neutral-900/30 flex items-center justify-between flex-shrink-0">
         <h2 className="text-xs font-extrabold tracking-wider uppercase text-secondary">
           Student Experiences
