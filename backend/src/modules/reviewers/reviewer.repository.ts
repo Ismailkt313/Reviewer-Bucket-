@@ -3,7 +3,7 @@ import type { IReviewer } from "./reviewer.types";
 
 export class ReviewerRepository {
   async findAll(): Promise<IReviewer[]> {
-    return await ReviewerModel.find().lean<IReviewer[]>();
+    return await ReviewerModel.find().sort({ name: 1 }).lean<IReviewer[]>();
   }
 
   async findBySlug(slug: string): Promise<IReviewer | null> {

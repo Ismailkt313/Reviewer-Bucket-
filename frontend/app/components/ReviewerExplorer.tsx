@@ -204,14 +204,12 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
     });
   }, [reviewers, query, selectedStack]);
 
-  // Default sorting to "Most Reviewed"
+  // Default sorting to alphabetical by name
   const sortedReviewers = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const statsA = statsMap[a.id];
-      const statsB = statsMap[b.id];
-      return (statsB?.experienceCount || 0) - (statsA?.experienceCount || 0);
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
     });
-  }, [filtered, statsMap]);
+  }, [filtered]);
 
   // Sliced progressive cards
   const visibleReviewers = useMemo(() => {
