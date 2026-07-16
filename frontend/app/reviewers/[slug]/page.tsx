@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Header from "@/app/components/Header";
 import ReviewerDetailWrapper from "@/app/components/ReviewerDetailWrapper";
 import { getApiUrl } from "@/app/utils/api";
 
@@ -118,20 +117,13 @@ export default async function ReviewerDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden bg-background text-foreground">
-      <div className="flex-shrink-0">
-        <Header />
-      </div>
-      <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <ReviewerDetailWrapper
-          reviewer={reviewer}
-          averageRating={averageRating}
-          ratingCount={ratingCount}
-          initialExperiences={initialExperiences}
-          initialNextCursor={initialNextCursor}
-          initialHasMore={initialHasMore}
-        />
-      </main>
-    </div>
+    <ReviewerDetailWrapper
+      reviewer={reviewer}
+      averageRating={averageRating}
+      ratingCount={ratingCount}
+      initialExperiences={initialExperiences}
+      initialNextCursor={initialNextCursor}
+      initialHasMore={initialHasMore}
+    />
   );
 }

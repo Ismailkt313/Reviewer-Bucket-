@@ -19,6 +19,7 @@ type ReviewerRatingSectionProps = {
   reviewerStacks: string[];
   initialAverageRating: number | null;
   initialRatingCount: number;
+  isCollapsed?: boolean;
 };
 
 function StarIcon({ filled, className }: { filled: boolean; className?: string }) {
@@ -45,7 +46,8 @@ export default function ReviewerRatingSection({
   reviewerCode,
   reviewerStacks,
   initialAverageRating,
-  initialRatingCount
+  initialRatingCount,
+  isCollapsed = false
 }: ReviewerRatingSectionProps) {
   const [localRating, setLocalRating] = useState<number | undefined>(undefined);
   const [hoverRating, setHoverRating] = useState<number | undefined>(undefined);
@@ -54,16 +56,7 @@ export default function ReviewerRatingSection({
   const [mounted, setMounted] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isSticky, setIsSticky] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsSticky(window.scrollY > 120);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -190,31 +183,14 @@ export default function ReviewerRatingSection({
 
   return (
     <>
-      <div className={`md:hidden fixed top-0 left-0 right-0 h-14 bg-surface/95 backdrop-blur border-b border-border z-50 flex items-center px-4 gap-3 transition-all duration-200 ${isSticky ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none"}`}>
-        <Link href="/" className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-secondary flex items-center justify-center min-w-[44px] min-h-[44px]" aria-label="Back">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-neutral-200 to-neutral-300 dark:from-neutral-800 dark:to-neutral-700 flex items-center justify-center text-xs font-bold text-secondary shadow-xs select-none">
-          {avatarChar}
-        </div>
-        <div className="min-w-0 flex flex-col justify-center">
-          <span className="text-xs font-bold text-foreground truncate">{reviewerName}</span>
-          <span className="text-[9px] text-muted truncate">{reviewerStacks.join(" • ") || "General"}</span>
-        </div>
-        <div className="ml-auto flex items-center gap-1 text-xs">
-          <span className="text-amber-500">★</span>
-          <span className="font-semibold">{averageRating !== null ? averageRating.toFixed(1) : "0.0"}</span>
-        </div>
-      </div>
-
-      <div className="relative rounded-2xl border border-border bg-surface p-3.5 flex flex-col items-center text-center shadow-xs">
+      <div className="relative rounded-2xl border border-border bg-surface p-3.5 flex flex-col items-center text-center shadow-xs" aria-hidden={isCollapsed}>
         <Link
           href="/"
-          className="absolute top-3 left-3 inline-flex items-center justify-center gap-1.5 rounded-full md:rounded-lg border border-border bg-background p-2.5 md:px-2.5 md:py-1 text-xs font-bold text-secondary transition-colors duration-150 hover:bg-neutral-50 dark:hover:bg-neutral-900 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none z-10 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
+          className="hidden md:inline-flex absolute top-3 left-3 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-bold text-secondary transition-colors duration-150 hover:bg-neutral-50 dark:hover:bg-neutral-900 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none z-10"
           aria-label="Back to reviewers"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="hidden md:inline">Back</span>
+          <span>Back</span>
         </Link>
 
         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neutral-200 to-neutral-300 dark:from-neutral-800 dark:to-neutral-700 flex items-center justify-center text-lg font-bold text-secondary shadow-xs select-none mb-1.5">
@@ -289,7 +265,7 @@ export default function ReviewerRatingSection({
             })}
           </div>
           {errorMessage && (
-            <p className="text-[11px] text-red-600 dark:text-red-400 font-semibold">{errorMessage}</p>
+            <p className="text-[11px] text-red-650 dark:text-red-400 font-semibold">{errorMessage}</p>
           )}
         </div>
       </div>

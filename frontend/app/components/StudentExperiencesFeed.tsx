@@ -65,6 +65,7 @@ export default function StudentExperiencesFeed({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
   const isNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -93,14 +94,18 @@ export default function StudentExperiencesFeed({
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     if (onCollapsedChange) {
-      onCollapsedChange(scrollTop > 40);
+      onCollapsedChange(scrollTop > 180);
     }
   }, [onCollapsedChange]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        setIsReady(true);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -223,9 +228,8 @@ export default function StudentExperiencesFeed({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isSubmitting) {
-        handleSubmit(e);
-      }
+      if (isSubmitting) return;
+      handleSubmit(e);
     }
   };
 
@@ -243,7 +247,7 @@ export default function StudentExperiencesFeed({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scroll-smooth overscroll-contain min-h-0"
+        className={`flex-1 overflow-y-auto p-4 flex flex-col gap-4 scroll-smooth overscroll-contain min-h-0 transition-opacity duration-150 ${isReady ? "opacity-100" : "opacity-0"}`}
       >
         {hasMore && (
           <div className="flex justify-center pb-2 border-b border-border/40 flex-shrink-0">
@@ -267,23 +271,23 @@ export default function StudentExperiencesFeed({
         )}
 
         {experiencesList.length > 0 ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2 md:gap-3">
             {experiencesList.map((exp) => (
               <div
                 key={exp.id}
-                className="flex gap-3 items-start text-sm bg-background/40 hover:bg-background/80 p-2.5 rounded-xl border border-border/40 transition-colors duration-150 animate-slide-up-fade"
+                className="flex gap-2 md:gap-3 items-start text-sm bg-background/40 hover:bg-background/80 p-2 md:p-2.5 rounded-lg md:rounded-xl border border-border/40 transition-colors duration-150 animate-slide-up-fade"
               >
-                <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-xs font-bold text-muted shadow-xs select-none">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[10px] md:text-xs font-bold text-muted shadow-xs select-none">
                   A
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-foreground text-xs">Anonymous Student</span>
-                    <span className="text-[10px] text-muted font-medium">
+                    <span className="font-bold text-foreground text-[11px] md:text-xs">Anonymous Student</span>
+                    <span className="text-[9px] md:text-[10px] text-muted font-medium">
                       {getRelativeTime(exp.createdAt)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-secondary leading-relaxed whitespace-pre-wrap">
+                  <p className="mt-0.5 text-xs md:text-sm text-secondary leading-relaxed whitespace-pre-wrap">
                     {exp.content}
                   </p>
                 </div>
@@ -344,21 +348,25 @@ export default function StudentExperiencesFeed({
             placeholder="Share your experience..."
             maxLength={1000}
             rows={1}
-            className="flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:border-neutral-400 focus:ring-2 focus:ring-focus/15 focus:outline-none dark:focus:border-neutral-500 resize-none min-h-[44px] transition-colors duration-150 scrollbar-none"
+            className="flex-1 rounded-2xl md:rounded-xl border border-border bg-background px-3.5 py-2.5 text-base md:text-sm text-foreground focus:border-neutral-400 focus:ring-2 focus:ring-focus/15 focus:outline-none dark:focus:border-neutral-500 resize-none min-h-[44px] max-h-[120px] transition-colors duration-150 scrollbar-none"
           />
 
           <button
             type="submit"
-            disabled={isSubmitting || inputText.trim().length < 2}
-            className="h-11 px-4 rounded-xl bg-accent text-background text-xs font-bold border border-accent hover:opacity-90 transition-opacity duration-150 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-30 disabled:pointer-events-none min-w-[72px]"
+            disabled={isSubmitting || !inputText.trim()}
+            className="w-10 h-10 md:w-auto md:h-auto rounded-full md:rounded-xl bg-accent text-background md:px-4 md:py-2.5 text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] md:min-w-0"
+            aria-label="Send experience"
           >
             {isSubmitting ? (
-              <div className="flex items-center gap-1">
-                <span className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full" />
-                <span>Posting</span>
-              </div>
+              <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
             ) : (
-              "Send"
+              <>
+                <svg className="w-4 h-4 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                <span className="hidden md:inline">Send</span>
+              </>
             )}
           </button>
         </form>
