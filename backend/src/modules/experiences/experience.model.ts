@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import type { IExperienceDoc } from "./experience.types";
+import type { IExperienceDoc } from "./experience.types.js";
 
 const experienceSchema = new Schema<IExperienceDoc>(
   {
@@ -15,12 +15,6 @@ const experienceSchema = new Schema<IExperienceDoc>(
       trim: true,
       minlength: 2,
       maxlength: 1000
-    },
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "approved",
-      index: true
     }
   },
   {

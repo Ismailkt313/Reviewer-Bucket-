@@ -1,6 +1,6 @@
-import { ExperienceRepository, serializeCursor } from "./experience.repository";
-import { ReviewerRepository } from "../reviewers/reviewer.repository";
-import { AppError } from "../../errors/app-error";
+import { ExperienceRepository, serializeCursor } from "./experience.repository.js";
+import { ReviewerRepository } from "../reviewers/reviewer.repository.js";
+import { AppError } from "../../errors/app-error.js";
 
 export class ExperienceService {
   private experienceRepository = new ExperienceRepository();
@@ -14,13 +14,13 @@ export class ExperienceService {
     return await this.experienceRepository.create(reviewerId, content);
   }
 
-  async getApprovedExperiences(reviewerId: string, limit: number, cursor?: string) {
+  async getExperiences(reviewerId: string, limit: number, cursor?: string) {
     const reviewer = await this.reviewerRepository.findById(reviewerId);
     if (!reviewer) {
       throw new AppError(404, "Reviewer not found");
     }
 
-    const list = await this.experienceRepository.findApproved(reviewerId, limit, cursor);
+    const list = await this.experienceRepository.find(reviewerId, limit, cursor);
     const hasMore = list.length > limit;
     const sliced = hasMore ? list.slice(0, limit) : list;
 

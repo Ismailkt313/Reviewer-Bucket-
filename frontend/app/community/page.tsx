@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import io, { Socket } from "socket.io-client";
-import { getAnonymousClientId } from "@/app/utils/anonymous-id";
+import { Socket } from "socket.io-client";
+import { getSocket } from "@/app/utils/socket";
 
 type PublicCommunityMessage = {
   id: string;
@@ -187,44 +187,43 @@ export default function CommunityPage() {
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    const anonymousClientId = getAnonymousClientId();
-    const socketUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-    const socket = io(`${socketUrl}/community`, {
-      transports: ["websocket"],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      auth: { anonymousClientId }
-    });
-
+    const socket = getSocket();
     socketRef.current = socket;
 
-    socket.on("connect", () => {
+    if (socket.connected) {
+      setTimeout(() => {
+        setStatus("connected");
+        setError("");
+      }, 0);
+      socket.emit("community:history:request");
+    }
+
+    const handleConnect = () => {
       setStatus("connected");
       setError("");
       socket.emit("community:history:request");
-    });
+    };
 
-    socket.on("disconnect", () => {
+    const handleDisconnect = () => {
       setStatus("disconnected");
-    });
+    };
 
-    socket.on("connect_error", () => {
+    const handleConnectError = () => {
       setStatus("reconnecting");
-    });
+    };
 
-    socket.on("community:online-count", (data: { count: number }) => {
+    const handleOnlineCount = (data: { count: number }) => {
       setOnlineCount(data.count);
-    });
+    };
 
-    socket.on("community:history", (data: { messages: PublicCommunityMessage[] }) => {
+    const handleHistory = (data: { messages: PublicCommunityMessage[] }) => {
       setMessages(data.messages);
       setTimeout(() => {
         scrollToBottom("instant");
       }, 50);
-    });
+    };
 
-    socket.on("community:message:new", (message: PublicCommunityMessage) => {
+    const handleMessageNew = (message: PublicCommunityMessage) => {
       if (pendingMessageIds.current.has(message.id)) {
         pendingMessageIds.current.delete(message.id);
         return;
@@ -250,14 +249,28 @@ export default function CommunityPage() {
           }
         }, 50);
       }
-    });
+    };
 
-    socket.on("community:error", (data: { message: string }) => {
+    const handleError = (data: { message: string }) => {
       setError(data.message);
-    });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("community:online-count", handleOnlineCount);
+    socket.on("community:history", handleHistory);
+    socket.on("community:message:new", handleMessageNew);
+    socket.on("community:error", handleError);
 
     return () => {
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("community:online-count", handleOnlineCount);
+      socket.off("community:history", handleHistory);
+      socket.off("community:message:new", handleMessageNew);
+      socket.off("community:error", handleError);
     };
   }, [scrollToBottom, isNearBottom]);
 

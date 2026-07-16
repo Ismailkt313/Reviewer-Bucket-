@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { postExperience, getExperiences } from "./experience.controller";
+import { postExperience, getExperiences } from "./experience.controller.js";
 import {
   validateReviewerId,
   validatePostExperience,
   validateGetExperiencesQuery
-} from "./experience.validation";
+} from "./experience.validation.js";
 
 const router = Router();
 
