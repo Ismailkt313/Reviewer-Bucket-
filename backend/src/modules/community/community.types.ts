@@ -34,6 +34,7 @@ export interface ClientToServerEvents {
     ack: (response: { success: boolean; message?: string; messageId?: string }) => void
   ) => void;
   "community:history:request": () => void;
+  "community:online-count:request": () => void;
 }
 
 export interface ServerToClientEvents {

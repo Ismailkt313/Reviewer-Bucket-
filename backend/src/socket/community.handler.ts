@@ -36,7 +36,17 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
   const anonymousClientId: string = socket.handshake.auth.anonymousClientId;
   const isRateLimited = createRateLimiter();
 
-  CommunityBroadcaster.broadcastOnlineCount(io.sockets.sockets.size);
+  // Broadcast the updated count to all OTHER already-connected clients
+  socket.broadcast.emit("community:online-count", { count: io.sockets.sockets.size });
+
+  // Send the current count directly to the newly connected socket.
+  // Use setImmediate/nextTick so the client's listener has time to attach
+  // (the socket.io "connect" event fires synchronously before React registers handlers).
+  setTimeout(() => {
+    if (socket.connected) {
+      socket.emit("community:online-count", { count: io.sockets.sockets.size });
+    }
+  }, 100);
 
   socket.on("community:history:request", async () => {
     try {
@@ -48,6 +58,13 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
     } catch {
       socket.emit("community:error", { message: "Failed to load history" });
     }
+  });
+
+  // Allow any client to request the current online count on demand.
+  // This handles the case where the socket is already connected (shared singleton)
+  // and the Community page mounts without triggering a new socket connection.
+  socket.on("community:online-count:request", () => {
+    socket.emit("community:online-count", { count: io.sockets.sockets.size });
   });
 
   socket.on("community:message:send", async (
@@ -73,6 +90,8 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
   });
 
   socket.on("disconnect", () => {
-    CommunityBroadcaster.broadcastOnlineCount(io.sockets.sockets.size);
+    const count = Math.max(0, io.sockets.sockets.size);
+    io.emit("community:online-count", { count });
   });
 }
+

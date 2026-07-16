@@ -154,22 +154,16 @@ export default function CommunityClient() {
     const socket = getSocket();
     socketRef.current = socket;
 
-    if (socket.connected) {
-      setTimeout(() => {
-        setStatus("connected");
-        setError("");
-      }, 0);
-      socket.emit("community:history:request");
-    }
-
     const handleConnect = () => {
       setStatus("connected");
       setError("");
       socket.emit("community:history:request");
+      socket.emit("community:online-count:request");
     };
 
     const handleDisconnect = () => {
       setStatus("disconnected");
+      setOnlineCount(0);
     };
 
     const handleConnectError = () => {
@@ -219,6 +213,7 @@ export default function CommunityClient() {
       setError(data.message);
     };
 
+    // Register ALL listeners BEFORE any emits to prevent race conditions.
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
@@ -226,6 +221,15 @@ export default function CommunityClient() {
     socket.on("community:history", handleHistory);
     socket.on("community:message:new", handleMessageNew);
     socket.on("community:error", handleError);
+
+    // If socket is already connected (e.g. navigated from another page),
+    // explicitly request history and online count since "connect" won't fire again.
+    if (socket.connected) {
+      setStatus("connected");
+      setError("");
+      socket.emit("community:history:request");
+      socket.emit("community:online-count:request");
+    }
 
     return () => {
       socket.off("connect", handleConnect);
