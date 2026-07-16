@@ -20,6 +20,9 @@ export const metadata: Metadata = {
     "Find honest interview experiences shared by students for Brocamp reviewers. Search reviewers by name, reviewer code or technology stack.",
   verification: {
     google: "Fxk4TiHZlWYjCaJb47GBetDpNyY6MUgvVfWDO2QjeMQ",
+    other: {
+      "msvalidate.01": "6FEFD3864FA734B69E30A4BD1D0CC284",
+    },
   },
   keywords: [
     "Brocamp",
