@@ -257,75 +257,77 @@ export default function StudentExperiencesFeed({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className={`flex-1 overflow-y-auto p-4 flex flex-col gap-4 scroll-smooth overscroll-contain min-h-0 transition-opacity duration-150 ${isReady ? "opacity-100" : "opacity-0"}`}
+        className={`flex-1 overflow-y-auto scroll-smooth overscroll-contain min-h-0 transition-opacity duration-150 ${isReady ? "opacity-100" : "opacity-0"}`}
       >
-        {hasMore && (
-          <div className="flex justify-center pb-2 border-b border-border/40 flex-shrink-0">
-            <button
-              type="button"
-              onClick={handleLoadMore}
-              disabled={isLoadingMore}
-              className="text-[11px] text-secondary font-bold px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus min-h-[44px]"
-            >
-              Load older experiences
-            </button>
-          </div>
-        )}
-
-        {isLoadingMore && (
-          <div className="flex flex-col gap-4 flex-shrink-0">
-            <CommentSkeleton />
-            <CommentSkeleton />
-            <CommentSkeleton />
-          </div>
-        )}
-
-        {experiencesList.length > 0 ? (
-          <div className="flex flex-col gap-2 md:gap-3">
-            {experiencesList.map((exp) => (
-              <div
-                key={exp.id}
-                className="flex gap-2 md:gap-3 items-start text-sm bg-background/40 hover:bg-background/80 p-2 md:p-2.5 rounded-lg md:rounded-xl border border-border/40 transition-colors duration-150 animate-slide-up-fade"
+        <div className="min-h-full flex flex-col p-4 gap-4">
+          {hasMore && (
+            <div className="flex justify-center pb-2 border-b border-border/40 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="text-[11px] text-secondary font-bold px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus min-h-[44px]"
               >
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[10px] md:text-xs font-bold text-muted shadow-xs select-none">
-                  A
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-foreground text-[11px] md:text-xs">Anonymous Student</span>
-                    <span className="text-[9px] md:text-[10px] text-muted font-medium">
-                      {getRelativeTime(exp.createdAt)}
-                    </span>
+                Load older experiences
+              </button>
+            </div>
+          )}
+
+          {isLoadingMore && (
+            <div className="flex flex-col gap-4 flex-shrink-0">
+              <CommentSkeleton />
+              <CommentSkeleton />
+              <CommentSkeleton />
+            </div>
+          )}
+
+          {experiencesList.length > 0 ? (
+            <div className="flex flex-col gap-2 md:gap-3">
+              {experiencesList.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="flex gap-2 md:gap-3 items-start text-sm bg-background/40 hover:bg-background/80 p-2 md:p-2.5 rounded-lg md:rounded-xl border border-border/40 transition-colors duration-150 animate-slide-up-fade"
+                >
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[10px] md:text-xs font-bold text-muted shadow-xs select-none">
+                    A
                   </div>
-                  <p className="mt-0.5 text-xs md:text-sm text-secondary leading-relaxed whitespace-pre-wrap">
-                    {exp.content}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-foreground text-[11px] md:text-xs">Anonymous Student</span>
+                      <span className="text-[9px] md:text-[10px] text-muted font-medium">
+                        {getRelativeTime(exp.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs md:text-sm text-secondary leading-relaxed whitespace-pre-wrap">
+                      {exp.content}
+                    </p>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
+              <div className="text-4xl text-neutral-300 dark:text-neutral-700">
+                <MessageSquare className="w-10 h-10" />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
-            <div className="text-4xl text-neutral-300 dark:text-neutral-700">
-              <MessageSquare className="w-10 h-10" />
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-foreground">
+                  Be the first to share your experience
+                </p>
+                <p className="text-xs text-muted max-w-[280px]">
+                  Help future students by sharing your interview process and questions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => textareaRef.current?.focus()}
+                className="mt-2 text-xs font-bold text-background bg-accent px-4 py-2 rounded-lg border border-accent hover:opacity-90 transition-opacity min-h-[44px]"
+              >
+                Write Experience
+              </button>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-foreground">
-                Be the first to share your experience
-              </p>
-              <p className="text-xs text-muted max-w-[280px]">
-                Help future students by sharing your interview process and questions.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => textareaRef.current?.focus()}
-              className="mt-2 text-xs font-bold text-background bg-accent px-4 py-2 rounded-lg border border-accent hover:opacity-90 transition-opacity min-h-[44px]"
-            >
-              Write Experience
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {unreadCount > 0 && (
