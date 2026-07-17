@@ -60,17 +60,8 @@ export default function ReviewerCard({ reviewer, stats }: ReviewerCardProps) {
 
         {/* Rating and Experience Summary */}
         <div 
-          itemProp="aggregateRating" 
-          itemScope 
-          itemType="https://schema.org/AggregateRating"
           className="flex items-center gap-2 text-[15px] md:text-[17px] text-secondary font-semibold pt-0.5 tracking-tight leading-normal"
         >
-          <meta itemProp="bestRating" content="5" />
-          <meta itemProp="worstRating" content="1" />
-          <meta itemProp="ratingValue" content={rating > 0 ? rating.toFixed(1) : "5.0"} />
-          <meta itemProp="ratingCount" content={ratingCount > 0 ? ratingCount.toString() : "1"} />
-          <meta itemProp="reviewCount" content={experienceCount > 0 ? experienceCount.toString() : "1"} />
-
           {ratingCount > 0 ? (
             <>
               <div className="flex items-center gap-1 text-amber-500">

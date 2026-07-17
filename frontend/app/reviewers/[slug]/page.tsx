@@ -180,24 +180,7 @@ export default async function ReviewerDetailPage({ params }: Props) {
     },
     "url": pageUrl,
     "image": `${siteConfig.url}/reviwerbucketLogo.png`,
-    "knowsAbout": reviewer.stacks,
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": averageRating !== null ? averageRating.toFixed(1) : "5.0",
-      "ratingCount": ratingCount > 0 ? ratingCount.toString() : "1",
-      "reviewCount": initialExperiences.length > 0 ? initialExperiences.length.toString() : "1",
-      "bestRating": "5",
-      "worstRating": "1"
-    },
-    "review": initialExperiences.slice(0, 5).map((exp) => ({
-      "@type": "Review",
-      "author": {
-        "@type": "Person",
-        "name": "Anonymous Brocamp Student"
-      },
-      "datePublished": exp.createdAt,
-      "reviewBody": exp.content
-    }))
+    "knowsAbout": reviewer.stacks
   };
 
   const faqSchema = {

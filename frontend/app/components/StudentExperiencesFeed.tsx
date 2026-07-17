@@ -376,30 +376,23 @@ export default function StudentExperiencesFeed({
               {experiencesList.map((exp) => (
                 <div
                   key={exp.id}
-                  itemProp="review"
-                  itemScope
-                  itemType="https://schema.org/Review"
                   className="flex gap-2 items-start text-sm bg-background/40 hover:bg-background/70 p-2 md:p-2.5 rounded-xl border border-border/30 transition-colors duration-150"
                 >
-                  <meta itemProp="datePublished" content={exp.createdAt} />
                   <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[9px] md:text-[10px] font-bold text-muted select-none">
                     A
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span
-                        itemProp="author"
-                        itemScope
-                        itemType="https://schema.org/Person"
                         className="font-bold text-foreground text-[10px] md:text-[11px]"
                       >
-                        <span itemProp="name">Anonymous Student</span>
+                        <span>Anonymous Student</span>
                       </span>
                       <span className="text-[9px] md:text-[10px] text-muted font-medium">
                         {getRelativeTime(exp.createdAt)}
                       </span>
                     </div>
-                    <p itemProp="reviewBody" className="mt-0.5 text-[12px] md:text-[13px] text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                    <p className="mt-0.5 text-[12px] md:text-[13px] text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {exp.content}
                     </p>
                   </div>
