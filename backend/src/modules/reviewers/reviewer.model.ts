@@ -13,15 +13,19 @@ const reviewerSchema = new Schema<IReviewerDoc>(
     code: {
       type: String,
       required: true,
-      trim: true,
-      unique: true
+      trim: true
     },
     slug: {
       type: String,
       required: true,
       trim: true,
-      unique: true,
       lowercase: true
+    },
+    status: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "REJECTED"],
+      default: "PENDING",
+      index: true
     },
     stacks: {
       type: [String],

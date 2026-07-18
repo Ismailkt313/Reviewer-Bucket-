@@ -45,7 +45,8 @@ async function seed() {
           name: seedItem.name,
           code: seedItem.code,
           slug: seedItem.slug,
-          stacks: seedItem.stacks
+          stacks: seedItem.stacks,
+          status: "APPROVED"
         });
         createdCount++;
       } else {
@@ -53,8 +54,9 @@ async function seed() {
         const hasSlugChanged = existing.slug !== seedItem.slug;
         const hasStacksChanged =
           JSON.stringify(existing.stacks) !== JSON.stringify(seedItem.stacks);
+        const hasStatusChanged = (existing as any).status !== "APPROVED";
 
-        if (hasNameChanged || hasSlugChanged || hasStacksChanged) {
+        if (hasNameChanged || hasSlugChanged || hasStacksChanged || hasStatusChanged) {
           if (hasSlugChanged) {
             const slugConflict = await ReviewerModel.findOne({ slug: seedItem.slug });
             if (slugConflict && slugConflict.code !== seedItem.code) {
@@ -66,6 +68,7 @@ async function seed() {
           existing.name = seedItem.name;
           existing.slug = seedItem.slug;
           existing.stacks = seedItem.stacks;
+          (existing as any).status = "APPROVED";
           await existing.save();
           updatedCount++;
         } else {

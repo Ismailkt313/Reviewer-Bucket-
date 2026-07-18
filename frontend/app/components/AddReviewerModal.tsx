@@ -53,7 +53,7 @@ export default function AddReviewerModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; code?: string; stacks?: string; general?: string }>({});
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ title: string; description?: string } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -196,7 +196,10 @@ export default function AddReviewerModal({
 
       if (!res.ok) {
         if (res.status === 409) {
-          setErrors({ code: json.message || "This reviewer code already exists." });
+          const errMsg = json.message || (mode === "edit"
+            ? "An update request for this reviewer is already under review."
+            : "This reviewer already exists or is awaiting approval.");
+          setErrors({ code: errMsg });
         } else {
           setErrors({ general: json.message || "Something went wrong. Please try again." });
         }
@@ -205,14 +208,19 @@ export default function AddReviewerModal({
 
       setToast(
         mode === "edit"
-          ? "🎉 Reviewer details updated successfully."
-          : "🎉 Reviewer added successfully. Students can now share experiences."
+          ? {
+              title: "Update request submitted successfully.",
+              description: "Your requested changes have been received and are awaiting verification. Once approved, they will be reflected publicly."
+            }
+          : {
+              title: "Reviewer request submitted successfully.",
+              description: "Your reviewer request has been received and is awaiting verification. Once approved by our team, it will appear in the public reviewer list."
+            }
       );
-      onSuccess(json.data);
       resetForm();
 
       // Delay close so toast is visible briefly
-      setTimeout(() => onClose(), 600);
+      setTimeout(() => onClose(), 3500);
     } catch {
       setErrors({ general: "Network error. Please check your connection." });
     } finally {
@@ -266,9 +274,19 @@ export default function AddReviewerModal({
     <>
       {/* Toast */}
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] max-w-sm w-full px-4 animate-slide-up-fade">
-          <div className="bg-emerald-600 dark:bg-emerald-500 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-center">
-            {toast}
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] max-w-md w-full px-4 animate-slide-up-fade">
+          <div className="bg-emerald-600 dark:bg-emerald-500 text-white px-5 py-4 rounded-2xl shadow-2xl text-left border border-emerald-500/20">
+            <h3 className="font-bold text-[15px] flex items-center gap-2 mb-1">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" fill="currentColor"/>
+              </svg>
+              {toast.title}
+            </h3>
+            {toast.description && (
+              <p className="text-xs text-white/90 leading-relaxed font-normal pl-7">
+                {toast.description}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -292,7 +310,7 @@ export default function AddReviewerModal({
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-surface z-10 rounded-t-2xl flex-shrink-0">
             <h2 id="add-reviewer-title" className="text-base font-bold text-foreground">
-              {mode === "edit" ? "Edit Reviewer" : "Add Reviewer"}
+              {mode === "edit" ? "Edit Reviewer" : "Request Reviewer"}
             </h2>
             <button
               type="button"
@@ -493,12 +511,12 @@ export default function AddReviewerModal({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    {mode === "edit" ? "Saving..." : "Adding..."}
+                    {mode === "edit" ? "Saving..." : "Submitting..."}
                   </>
                 ) : (
                   <>
                     {mode === "edit" ? null : <Plus className="w-4 h-4" />}
-                    {mode === "edit" ? "Save Changes" : "Add Reviewer"}
+                    {mode === "edit" ? "Save Changes" : "Request Reviewer"}
                   </>
                 )}
               </button>

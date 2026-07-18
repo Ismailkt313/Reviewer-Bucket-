@@ -25,14 +25,18 @@ export class ReviewerService {
     name: string;
     code: string;
     stacks: string[];
+    status?: "PENDING" | "APPROVED" | "REJECTED";
   }): Promise<IReviewer> {
     const normalizedCode = input.code.replace(/[\s-]/g, "").toUpperCase();
     const slug = normalizedCode.toLowerCase();
     const normalizedName = input.name.trim().replace(/\s+/g, " ");
 
-    const existing = await this.reviewerRepository.findByCode(normalizedCode);
-    if (existing) {
-      throw new AppError(409, `Reviewer code "${normalizedCode}" already exists.`);
+    // Check APPROVED or PENDING duplicates by code or name
+    const existingByCode = await this.reviewerRepository.findByCodeAndStatusList(normalizedCode, ["APPROVED", "PENDING"]);
+    const existingByName = await this.reviewerRepository.findByNameAndStatusList(normalizedName, ["APPROVED", "PENDING"]);
+
+    if (existingByCode || existingByName) {
+      throw new AppError(409, "This reviewer already exists or is awaiting approval.");
     }
 
     try {
@@ -40,7 +44,8 @@ export class ReviewerService {
         name: normalizedName,
         code: normalizedCode,
         slug,
-        stacks: input.stacks.map((s) => s.trim()).filter(Boolean)
+        stacks: input.stacks.map((s) => s.trim()).filter(Boolean),
+        status: input.status || "PENDING"
       });
     } catch (error: unknown) {
       if (
@@ -49,7 +54,7 @@ export class ReviewerService {
         "code" in error &&
         (error as { code: number }).code === 11000
       ) {
-        throw new AppError(409, `Reviewer code "${normalizedCode}" already exists.`);
+        throw new AppError(409, "This reviewer already exists or is awaiting approval.");
       }
       throw error;
     }
@@ -94,5 +99,44 @@ export class ReviewerService {
       }
       throw error;
     }
+  }
+
+  // Administrative / requests workflows
+  async getAllRequests(): Promise<IReviewer[]> {
+    return await this.reviewerRepository.findAllRequests();
+  }
+
+  async getRequestById(id: string): Promise<IReviewer> {
+    const request = await this.reviewerRepository.findRequestById(id);
+    if (!request) {
+      throw new AppError(404, "Reviewer request not found.");
+    }
+    return request;
+  }
+
+  async approveReviewerRequest(id: string): Promise<IReviewer> {
+    const request = await this.getRequestById(id);
+    if (request.status !== "PENDING") {
+      throw new AppError(400, "This request has already been reviewed.");
+    }
+
+    const updated = await this.reviewerRepository.updateStatus(id, "APPROVED");
+    if (!updated) {
+      throw new AppError(500, "Failed to approve reviewer request.");
+    }
+    return updated;
+  }
+
+  async rejectReviewerRequest(id: string): Promise<IReviewer> {
+    const request = await this.getRequestById(id);
+    if (request.status !== "PENDING") {
+      throw new AppError(400, "This request has already been reviewed.");
+    }
+
+    const updated = await this.reviewerRepository.updateStatus(id, "REJECTED");
+    if (!updated) {
+      throw new AppError(500, "Failed to reject reviewer request.");
+    }
+    return updated;
   }
 }

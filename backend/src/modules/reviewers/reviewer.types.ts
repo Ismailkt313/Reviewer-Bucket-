@@ -6,6 +6,7 @@ export interface IReviewer {
   code: string;
   slug: string;
   stacks: string[];
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ export interface IReviewerDoc extends Document {
   code: string;
   slug: string;
   stacks: string[];
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: Date;
   updatedAt: Date;
 }

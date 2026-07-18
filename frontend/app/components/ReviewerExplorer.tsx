@@ -427,7 +427,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                     className="mt-4 w-full sm:w-auto inline-flex h-11 md:h-12 items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-6 text-[13px] md:text-[15px] font-bold text-foreground hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors focus:outline-none focus:ring-2 focus:ring-focus shadow-xs tracking-tight"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Reviewer</span>
+                    <span>Request Reviewer</span>
                   </button>
                 </div>
               </div>
@@ -446,7 +446,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                 className="mt-4 w-full sm:w-auto inline-flex h-11 md:h-12 items-center justify-center gap-1.5 rounded-xl bg-accent text-background px-6 text-[13px] md:text-[15px] font-bold transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 tracking-tight"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Reviewer</span>
+                <span>Request Reviewer</span>
               </button>
             </div>
           )}

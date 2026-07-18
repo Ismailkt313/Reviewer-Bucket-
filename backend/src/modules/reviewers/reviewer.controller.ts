@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { ReviewerService } from "./reviewer.service";
+import { ReviewerUpdateRequestService } from "./reviewer-update-request.service";
 import { cacheService } from "../../utils/cache";
 
 const reviewerService = new ReviewerService();
+const updateRequestService = new ReviewerUpdateRequestService();
 
 export const getAllReviewers = async (
   _req: Request,
@@ -85,19 +87,24 @@ export const createReviewer = async (
 ): Promise<void> => {
   try {
     const { name, code, stacks } = req.body;
-    const reviewer = await reviewerService.createReviewer({ name, code, stacks });
-
-    // Invalidate list cache
-    await cacheService.del("reviewers:list");
+    
+    // Create reviewer document directly as PENDING
+    const reviewer = await reviewerService.createReviewer({
+      name,
+      code,
+      stacks,
+      status: "PENDING"
+    });
 
     res.status(201).json({
       success: true,
+      message: "Reviewer request submitted successfully.",
       data: {
         id: reviewer._id.toString(),
-        name: reviewer.name,
-        code: reviewer.code,
-        slug: reviewer.slug,
-        stacks: reviewer.stacks
+        reviewerName: reviewer.name,
+        reviewerCode: reviewer.code,
+        status: reviewer.status,
+        requestedAt: reviewer.createdAt
       }
     });
   } catch (error) {
@@ -114,30 +121,172 @@ export const updateReviewer = async (
     const { id } = req.params;
     const { name, code, stacks } = req.body;
 
-    // Get original details to purge old slug cache if it changes
-    let originalSlug = "";
-    try {
-      const original = await reviewerService.getReviewerBySlug(req.params.id); // might be ID or slug
-      originalSlug = original.slug;
-    } catch {}
+    const request = await updateRequestService.submitUpdateRequest({
+      reviewerId: id,
+      name,
+      code,
+      stacks
+    });
 
-    const reviewer = await reviewerService.updateReviewer(id, { name, code, stacks });
+    res.status(201).json({
+      success: true,
+      message: "Update request submitted successfully.",
+      data: {
+        id: request._id.toString(),
+        reviewerId: request.reviewerId.toString(),
+        proposedData: request.proposedData,
+        status: request.status,
+        requestedAt: request.requestedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-    // Invalidate caches
-    await Promise.all([
-      cacheService.del("reviewers:list"),
-      cacheService.del(`reviewers:slug:${reviewer.slug}`),
-      originalSlug ? cacheService.del(`reviewers:slug:${originalSlug}`) : Promise.resolve()
-    ]);
+export const getAllRequests = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const requests = await reviewerService.getAllRequests();
+    res.status(200).json({
+      success: true,
+      data: requests.map((r) => ({
+        id: r._id.toString(),
+        reviewerName: r.name,
+        reviewerCode: r.code,
+        stacks: r.stacks,
+        status: r.status,
+        requestedAt: r.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const reviewer = await reviewerService.approveReviewerRequest(id);
+
+    // Invalidate list cache since a new approved reviewer is active
+    await cacheService.del("reviewers:list");
 
     res.status(200).json({
       success: true,
       data: {
         id: reviewer._id.toString(),
-        name: reviewer.name,
-        code: reviewer.code,
-        slug: reviewer.slug,
-        stacks: reviewer.stacks
+        reviewerName: reviewer.name,
+        reviewerCode: reviewer.code,
+        status: reviewer.status
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const reviewer = await reviewerService.rejectReviewerRequest(id);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: reviewer._id.toString(),
+        reviewerName: reviewer.name,
+        reviewerCode: reviewer.code,
+        status: reviewer.status
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllUpdateRequests = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const requests = await updateRequestService.getAllRequests();
+    res.status(200).json({
+      success: true,
+      data: requests.map((r) => ({
+        id: r._id.toString(),
+        reviewerId: r.reviewerId,
+        proposedData: r.proposedData,
+        status: r.status,
+        requestedAt: r.requestedAt,
+        reviewedAt: r.reviewedAt,
+        reviewedBy: r.reviewedBy,
+        rejectionReason: r.rejectionReason
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveUpdateRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reviewedBy } = req.body;
+
+    const request = await updateRequestService.approveUpdateRequest(id, reviewedBy);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: request._id.toString(),
+        reviewerId: request.reviewerId.toString(),
+        status: request.status,
+        reviewedAt: request.reviewedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectUpdateRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { rejectionReason, reviewedBy } = req.body;
+
+    const request = await updateRequestService.rejectUpdateRequest(id, rejectionReason, reviewedBy);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: request._id.toString(),
+        reviewerId: request.reviewerId.toString(),
+        status: request.status,
+        rejectionReason: request.rejectionReason,
+        reviewedAt: request.reviewedAt
       }
     });
   } catch (error) {

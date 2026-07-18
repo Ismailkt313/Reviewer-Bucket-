@@ -4,14 +4,18 @@ import { ExperienceModel } from "../experiences/experience.model";
 import type { IReviewer } from "./reviewer.types";
 
 export class ReviewerRepository {
+  // Public listing: only APPROVED reviewers
   async findAll(): Promise<IReviewer[]> {
-    return await ReviewerModel.find().sort({ name: 1 }).lean<IReviewer[]>();
+    return await ReviewerModel.find({ status: "APPROVED" })
+      .sort({ name: 1 })
+      .lean<IReviewer[]>();
   }
 
+  // Public stats listing: only APPROVED reviewers
   async findAllWithStats(): Promise<any[]> {
-    // 1. Fetch all reviewers sorted by name with strict projections
-    const reviewers = await ReviewerModel.find()
-      .select({ name: 1, code: 1, slug: 1, stacks: 1 })
+    // 1. Fetch all APPROVED reviewers sorted by name with projections
+    const reviewers = await ReviewerModel.find({ status: "APPROVED" })
+      .select({ name: 1, code: 1, slug: 1, stacks: 1, status: 1 })
       .sort({ name: 1 })
       .lean();
 
@@ -59,37 +63,86 @@ export class ReviewerRepository {
     });
   }
 
+  // Public slug lookup: only APPROVED reviewers
   async findBySlug(slug: string): Promise<IReviewer | null> {
-    return await ReviewerModel.findOne({ slug })
-      .select({ name: 1, code: 1, slug: 1, stacks: 1 })
+    return await ReviewerModel.findOne({ slug, status: "APPROVED" })
+      .select({ name: 1, code: 1, slug: 1, stacks: 1, status: 1 })
       .lean<IReviewer | null>();
   }
 
+  // Public ID lookup: only APPROVED reviewers
   async findById(id: string): Promise<IReviewer | null> {
-    return await ReviewerModel.findById(id)
-      .select({ name: 1, code: 1, slug: 1, stacks: 1 })
+    return await ReviewerModel.findOne({ _id: id, status: "APPROVED" })
+      .select({ name: 1, code: 1, slug: 1, stacks: 1, status: 1 })
       .lean<IReviewer | null>();
   }
 
+  // Administrative / Moderation lookups: any status
+  async findRequestById(id: string): Promise<IReviewer | null> {
+    return await ReviewerModel.findById(id).lean<IReviewer | null>();
+  }
+
+  async findAllRequests(): Promise<IReviewer[]> {
+    return await ReviewerModel.find({ status: { $in: ["PENDING", "REJECTED"] } })
+      .sort({ createdAt: -1 })
+      .lean<IReviewer[]>();
+  }
+
+  async findByCodeAndStatusList(code: string, statusList: string[]): Promise<IReviewer | null> {
+    const normalizedCode = code.replace(/[\s-]/g, "").toUpperCase();
+    return await ReviewerModel.findOne({
+      code: normalizedCode,
+      status: { $in: statusList }
+    }).lean<IReviewer | null>();
+  }
+
+  async findByNameAndStatusList(name: string, statusList: string[]): Promise<IReviewer | null> {
+    const normalizedName = name.trim().replace(/\s+/g, " ");
+    return await ReviewerModel.findOne({
+      name: { $regex: new RegExp("^" + this.escapeRegExp(normalizedName) + "$", "i") },
+      status: { $in: statusList }
+    }).lean<IReviewer | null>();
+  }
+
+  // Deprecated direct code lookup: checks APPROVED status by default for compatibility
   async findByCode(code: string): Promise<IReviewer | null> {
-    return await ReviewerModel.findOne({ code })
-      .select({ name: 1, code: 1, slug: 1, stacks: 1 })
+    return await ReviewerModel.findOne({ code, status: "APPROVED" })
+      .select({ name: 1, code: 1, slug: 1, stacks: 1, status: 1 })
       .lean<IReviewer | null>();
   }
 
   async findByCodeExcluding(code: string, id: string): Promise<IReviewer | null> {
-    return await ReviewerModel.findOne({ code, _id: { $ne: id } })
-      .select({ name: 1, code: 1, slug: 1, stacks: 1 })
+    return await ReviewerModel.findOne({ code, _id: { $ne: id }, status: "APPROVED" })
+      .select({ name: 1, code: 1, slug: 1, stacks: 1, status: 1 })
       .lean<IReviewer | null>();
   }
 
-  async create(data: { name: string; code: string; slug: string; stacks: string[] }): Promise<IReviewer> {
-    const doc = await ReviewerModel.create(data);
+  async create(data: {
+    name: string;
+    code: string;
+    slug: string;
+    stacks: string[];
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+  }): Promise<IReviewer> {
+    const doc = await ReviewerModel.create({
+      ...data,
+      status: data.status || "PENDING"
+    });
     return doc.toObject() as unknown as IReviewer;
   }
 
-  async update(id: string, data: { name: string; code: string; slug: string; stacks: string[] }): Promise<IReviewer | null> {
+  async update(
+    id: string,
+    data: { name: string; code: string; slug: string; stacks: string[]; status?: "PENDING" | "APPROVED" | "REJECTED" }
+  ): Promise<IReviewer | null> {
     return await ReviewerModel.findByIdAndUpdate(id, data, { new: true }).lean<IReviewer | null>();
   }
-}
 
+  async updateStatus(id: string, status: "PENDING" | "APPROVED" | "REJECTED"): Promise<IReviewer | null> {
+    return await ReviewerModel.findByIdAndUpdate(id, { status }, { new: true }).lean<IReviewer | null>();
+  }
+
+  private escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+}
