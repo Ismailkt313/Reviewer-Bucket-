@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
   } catch {
-    // Fall back to empty
+    // Fall back to emptydsdsads
   }
 
   return [...main, ...reviewerUrls];
