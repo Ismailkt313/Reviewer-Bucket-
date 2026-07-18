@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ExperienceService } from "./experience.service.js";
 import { cacheService } from "../../utils/cache";
+import { triggerRevalidate } from "../../utils/revalidate";
 
 const experienceService = new ExperienceService();
 
@@ -24,6 +25,9 @@ export const postExperience = async (
       cacheService.delPattern(`experiences:list:${reviewerId}:*`),
       cacheService.del("reviewers:list")
     ]);
+
+    // On-demand frontend cache revalidation
+    triggerRevalidate("reviewers");
 
     try {
       const { ExperienceBroadcaster } = await import("../../socket/experience.broadcaster.js");

@@ -14,7 +14,7 @@ import type { Reviewer } from "./data/reviewers";
 export default async function Home() {
   let realReviewers: Reviewer[] = [];
   try {
-    const res = await fetch(getApiUrl("/api/reviewers"), { cache: "no-store" });
+    const res = await fetch(getApiUrl("/api/reviewers"), { next: { tags: ["reviewers"] } });
     if (res.ok) {
       const json = await res.json();
       if (json && Array.isArray(json.data)) {

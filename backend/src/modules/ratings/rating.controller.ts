@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { RatingService } from "./rating.service";
 import { cacheService } from "../../utils/cache";
+import { triggerRevalidate } from "../../utils/revalidate";
 
 const ratingService = new RatingService();
 
@@ -19,6 +20,9 @@ export const putRating = async (
       cacheService.del(`ratings:summary:${reviewerId}`),
       cacheService.del("reviewers:list")
     ]);
+
+    // On-demand frontend cache revalidation
+    triggerRevalidate("reviewers");
 
     res.status(200).json({
       success: true,
