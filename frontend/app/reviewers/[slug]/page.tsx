@@ -3,17 +3,10 @@ import { notFound } from "next/navigation";
 import ReviewerDetailWrapper from "@/app/components/ReviewerDetailWrapper";
 import { getApiUrl } from "@/app/utils/api";
 import { siteConfig } from "@/app/config";
+import type { Reviewer } from "@/app/data/reviewers";
 
 type Props = {
   params: Promise<{ slug: string }>;
-};
-
-type BackendReviewer = {
-  id: string;
-  name: string;
-  code: string;
-  slug: string;
-  stacks: string[];
 };
 
 type BackendExperience = {
@@ -46,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (res.ok) {
       const json = await res.json();
       if (json && json.data) {
-        const reviewer: BackendReviewer = json.data;
+        const reviewer: Reviewer = json.data;
         const pageUrl = `${siteConfig.url}/reviewers/${slug}`;
         const title = `${reviewer.name} (${reviewer.code}) Interview Experiences | Reviewer Bucket`;
         const description = `Read honest student interview experiences, ratings, technology stacks, and exam feedback for Brocamp reviewer ${reviewer.name} (${reviewer.code}) on Reviewer Bucket.`;
@@ -92,7 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ReviewerDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  let reviewer: BackendReviewer | null = null;
+  let reviewer: Reviewer | null = null;
   try {
     const res = await fetch(getApiUrl(`/api/reviewers/${slug}`), { cache: "no-store" });
     if (res.ok) {

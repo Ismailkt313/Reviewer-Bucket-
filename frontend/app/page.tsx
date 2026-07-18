@@ -9,17 +9,10 @@ import Disclaimer from "./components/Disclaimer";
 import Footer from "./components/Footer";
 import { getApiUrl } from "./utils/api";
 import { siteConfig } from "./config";
-
-type BackendReviewer = {
-  id: string;
-  name: string;
-  code: string;
-  slug: string;
-  stacks: string[];
-};
+import type { Reviewer } from "./data/reviewers";
 
 export default async function Home() {
-  let realReviewers: BackendReviewer[] = [];
+  let realReviewers: Reviewer[] = [];
   try {
     const res = await fetch(getApiUrl("/api/reviewers"), { cache: "no-store" });
     if (res.ok) {

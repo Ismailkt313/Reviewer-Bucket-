@@ -2,13 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "./config";
 import { getApiUrl } from "./utils/api";
 
-type BackendReviewer = {
-  id: string;
-  name: string;
-  code: string;
-  slug: string;
-  stacks: string[];
-};
+import type { Reviewer } from "./data/reviewers";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const main = [
@@ -32,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (res.ok) {
       const json = await res.json();
       if (json && Array.isArray(json.data)) {
-        reviewerUrls = json.data.map((reviewer: BackendReviewer) => ({
+        reviewerUrls = json.data.map((reviewer: Reviewer) => ({
           url: `${siteConfig.url}/reviewers/${reviewer.slug}`,
           lastModified: new Date(),
           changeFrequency: "weekly" as const,

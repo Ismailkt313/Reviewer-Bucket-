@@ -329,7 +329,7 @@ export default function AddReviewerModal({
                     setName(e.target.value);
                     if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
                   }}
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Vipin"
                   maxLength={100}
                   className={`w-full h-11 rounded-xl border bg-background px-3.5 text-[16px] md:text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-focus/15 transition-colors ${
                     errors.name ? "border-red-400 dark:border-red-600" : "border-border focus:border-neutral-400 dark:focus:border-neutral-500"

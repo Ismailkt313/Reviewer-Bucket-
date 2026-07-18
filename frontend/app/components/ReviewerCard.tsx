@@ -26,9 +26,9 @@ export default function ReviewerCard({ reviewer, stats }: ReviewerCardProps) {
   const displayName = reviewer.name || "Anonymous Reviewer";
   const avatarChar = displayName.charAt(0).toUpperCase();
 
-  const rating = stats?.averageRating ?? 0;
-  const ratingCount = stats?.ratingCount ?? 0;
-  const experienceCount = stats?.experienceCount ?? 0;
+  const rating = stats?.averageRating ?? reviewer.stats?.averageRating ?? 0;
+  const ratingCount = stats?.ratingCount ?? reviewer.stats?.ratingCount ?? 0;
+  const experienceCount = stats?.experienceCount ?? reviewer.stats?.experienceCount ?? 0;
 
   const experiencesText = `${formatExperiencesCount(experienceCount)} Experience${experienceCount === 1 ? "" : "s"}`;
 
