@@ -6,9 +6,45 @@ import { Socket } from "socket.io-client";
 import { getSocket } from "@/app/utils/socket";
 import { useVisualViewport } from "@/app/hooks/useVisualViewport";
 
+const ACCESSIBLE_COLORS = [
+  "#a855f7", // Purple
+  "#8b5cf6", // Violet
+  "#6366f1", // Indigo
+  "#3b82f6", // Blue
+  "#06b6d4", // Cyan
+  "#10b981", // Emerald
+  "#22c55e", // Green
+  "#f59e0b", // Amber
+  "#f97316", // Orange
+  "#ef4444", // Red
+  "#ec4899", // Pink
+  "#f43f5e"  // Rose
+];
+
+function getOrGeneratePersistentColor(): string {
+  if (typeof window === "undefined") return "#808080";
+  let stored = localStorage.getItem("chat_user_color");
+  if (!stored || !ACCESSIBLE_COLORS.includes(stored)) {
+    const randomColor = ACCESSIBLE_COLORS[Math.floor(Math.random() * ACCESSIBLE_COLORS.length)];
+    localStorage.setItem("chat_user_color", randomColor);
+    stored = randomColor;
+  }
+  return stored;
+}
+
 type PublicCommunityMessage = {
   id: string;
+  _id: string;
   content: string;
+  message: string;
+  color: string;
+  replyTo?: {
+    id: string;
+    _id: string;
+    content: string;
+    message: string;
+    color: string;
+  } | null;
   createdAt: string;
   isMine: boolean;
 };
@@ -59,7 +95,83 @@ export default function CommunityClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const [userColor, setUserColor] = useState<string>("#808080");
+  const [replyingTo, setReplyingTo] = useState<PublicCommunityMessage | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  
+  // Mobile Swipe-to-reply states
+  const [swipingId, setSwipingId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
   const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    setUserColor(getOrGeneratePersistentColor());
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setReplyingTo(null);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
+
+  const handleInitiateReply = useCallback((msg: PublicCommunityMessage) => {
+    setReplyingTo(msg);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
+
+  const handleScrollToMessage = useCallback((targetId: string) => {
+    const el = document.getElementById(`msg-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(targetId);
+      setTimeout(() => {
+        setHighlightedMessageId(null);
+      }, 2000);
+    }
+  }, []);
+
+  const handleTouchStartMessage = useCallback((e: React.TouchEvent, msgId: string) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    };
+    setSwipingId(msgId);
+    setSwipeOffset(0);
+  }, []);
+
+  const handleTouchMoveMessage = useCallback((e: React.TouchEvent, msgId: string) => {
+    if (!touchStartRef.current || swipingId !== msgId) return;
+    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+
+    if (deltaX > 0) {
+      const capped = Math.min(deltaX, 80);
+      setSwipeOffset(capped);
+    }
+  }, [swipingId]);
+
+  const handleTouchEndMessage = useCallback((e: React.TouchEvent, msg: PublicCommunityMessage) => {
+    if (swipingId === msg.id) {
+      if (swipeOffset >= 50) {
+        handleInitiateReply(msg);
+      }
+      setSwipingId(null);
+      setSwipeOffset(0);
+    }
+    touchStartRef.current = null;
+  }, [swipingId, swipeOffset, handleInitiateReply]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (scrollRef.current) {
@@ -271,14 +383,29 @@ export default function CommunityClient() {
     setIsSubmitting(true);
     setError("");
 
-    socket.emit("community:message:send", { content: trimmed }, (ack: { success: boolean; message?: string; messageId?: string }) => {
+    socket.emit("community:message:send", {
+      content: trimmed,
+      message: trimmed,
+      color: userColor,
+      replyTo: replyingTo ? replyingTo.id : null
+    }, (ack: { success: boolean; message?: string; messageId?: string }) => {
       setIsSubmitting(false);
       if (ack && ack.success) {
         if (ack.messageId) {
           pendingMessageIds.current.add(ack.messageId);
           const newMessage: PublicCommunityMessage = {
             id: ack.messageId,
+            _id: ack.messageId,
             content: trimmed,
+            message: trimmed,
+            color: userColor,
+            replyTo: replyingTo ? {
+              id: replyingTo.id,
+              _id: replyingTo.id,
+              content: replyingTo.content,
+              message: replyingTo.content,
+              color: replyingTo.color
+            } : null,
             createdAt: new Date().toISOString(),
             isMine: true
           };
@@ -289,6 +416,7 @@ export default function CommunityClient() {
           });
         }
         setInputText("");
+        setReplyingTo(null);
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
           textareaRef.current.focus();
@@ -299,7 +427,7 @@ export default function CommunityClient() {
         setError(ack?.message || "Could not submit message. Please try again.");
       }
     });
-  }, [inputText, isSubmitting]);
+  }, [inputText, isSubmitting, userColor, replyingTo]);
 
   const handleSendMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -378,23 +506,75 @@ export default function CommunityClient() {
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex w-full ${msg.isMine ? "justify-end" : "justify-start"}`}
+                  id={`msg-${msg.id}`}
+                  onTouchStart={(e) => handleTouchStartMessage(e, msg.id)}
+                  onTouchMove={(e) => handleTouchMoveMessage(e, msg.id)}
+                  onTouchEnd={(e) => handleTouchEndMessage(e, msg)}
+                  className={`flex w-full transition-all duration-500 ${
+                    msg.isMine ? "justify-end" : "justify-start"
+                  } ${highlightedMessageId === msg.id ? "bg-neutral-100 dark:bg-neutral-800/60 py-1.5 rounded-xl px-2" : ""}`}
+                  style={{
+                    transform: swipingId === msg.id ? `translateX(${swipeOffset}px)` : "translateX(0px)",
+                    transition: swipingId === msg.id ? "none" : "transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)"
+                  }}
                 >
-                  <div
-                    className={`max-w-[85%] md:max-w-[70%] lg:max-w-[60%] px-3.5 py-2 ${
-                      msg.isMine
-                        ? "ml-auto rounded-2xl rounded-br-sm bg-bubble-mine text-bubble-mine-text"
-                        : "mr-auto rounded-2xl rounded-bl-sm bg-bubble-other text-bubble-other-text"
-                    }`}
-                  >
-                    <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words [word-break:break-word] overflow-wrap-anywhere">
-                      {msg.content}
-                    </p>
-                    <div className={`flex justify-end mt-0.5 ${msg.isMine ? "opacity-60" : "opacity-50"}`}>
-                      <span className="text-[10px] leading-none">
-                        {formatMessageTime(msg.createdAt)}
-                      </span>
+                  <div className="relative group max-w-[85%] md:max-w-[70%] lg:max-w-[60%] flex items-center">
+                    <div
+                      className={`px-3.5 py-2 w-full ${
+                        msg.isMine
+                          ? "rounded-2xl rounded-br-sm bg-bubble-mine text-bubble-mine-text"
+                          : "rounded-2xl rounded-bl-sm bg-bubble-other text-bubble-other-text"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {!msg.isMine && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
+                            style={{ backgroundColor: msg.color || "#808080" }}
+                            title="Anonymous user color identity"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          {msg.replyTo && (
+                            <div
+                              onClick={() => handleScrollToMessage(msg.replyTo!.id)}
+                              className="mb-1.5 cursor-pointer rounded-lg bg-black/5 dark:bg-white/5 border-l-[3px] px-2.5 py-1 text-left hover:bg-black/10 dark:hover:bg-white/10 transition-colors select-none"
+                              style={{ borderColor: msg.replyTo.color }}
+                            >
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="w-1 h-1 rounded-full" style={{ backgroundColor: msg.replyTo.color }} />
+                                <span className="text-[9px] uppercase tracking-wider font-bold text-secondary">Reply</span>
+                              </div>
+                              <p className="text-[11px] leading-snug text-foreground/70 line-clamp-1 select-none">
+                                {msg.replyTo.content}
+                              </p>
+                            </div>
+                          )}
+                          <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words [word-break:break-word] overflow-wrap-anywhere">
+                            {msg.content}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`flex justify-end mt-0.5 ${msg.isMine ? "opacity-60" : "opacity-50"}`}>
+                        <span className="text-[10px] leading-none">
+                          {formatMessageTime(msg.createdAt)}
+                        </span>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInitiateReply(msg)}
+                      className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full text-secondary hidden md:flex items-center justify-center min-w-[32px] min-h-[32px] z-10 ${
+                        msg.isMine ? "left-[-40px]" : "right-[-40px]"
+                      }`}
+                      aria-label="Reply to message"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 10L4 15L9 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20 4V11C20 12.0609 19.5786 13.0783 18.8284 13.8284C18.0783 14.5786 17.0609 15 16 15H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))
@@ -432,6 +612,34 @@ export default function CommunityClient() {
         )}
 
         <div className="flex-shrink-0 border-t border-border bg-surface w-full">
+          {/* Reply Preview */}
+          {replyingTo && (
+            <div className="w-full border-b border-border bg-surface/50">
+              <div className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 md:px-8 py-2 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2 duration-150">
+                <div className="flex items-start gap-2.5 min-w-0 border-l-[3px] pl-3" style={{ borderColor: replyingTo.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: replyingTo.color }} />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-secondary">Replying to</span>
+                    <p className="text-xs text-foreground/80 line-clamp-2 leading-relaxed break-words">
+                      {replyingTo.content}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="flex-shrink-0 p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full text-secondary transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  aria-label="Cancel reply"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M5 5L15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 md:px-8 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
             <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <div className="flex-1 min-w-0">

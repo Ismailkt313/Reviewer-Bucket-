@@ -10,7 +10,17 @@ const communityService = new CommunityService();
 function toPublicMessage(msg: InternalCommunityMessage, isMine: boolean): PublicCommunityMessage {
   return {
     id: msg.id,
+    _id: msg._id,
     content: msg.content,
+    message: msg.content,
+    color: msg.color,
+    replyTo: msg.replyTo ? {
+      id: msg.replyTo.id,
+      _id: msg.replyTo._id,
+      content: msg.replyTo.content,
+      message: msg.replyTo.content,
+      color: msg.replyTo.color
+    } : null,
     createdAt: msg.createdAt,
     isMine
   };
@@ -68,7 +78,7 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
   });
 
   socket.on("community:message:send", async (
-    payload: { content: string },
+    payload: { content?: string; message?: string; color: string; replyTo?: string | null },
     ack: (response: { success: boolean; message?: string; messageId?: string }) => void
   ) => {
     if (typeof ack !== "function") {
@@ -78,7 +88,13 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
       ack({ success: false, message: "Too many messages. Please wait a moment." });
       return;
     }
-    const result = await communityService.submitMessage(payload?.content, anonymousClientId);
+    const messageText = payload?.message || payload?.content;
+    const result = await communityService.submitMessage(
+      messageText,
+      payload?.color,
+      payload?.replyTo,
+      anonymousClientId
+    );
     if (!result.success) {
       ack({ success: false, message: result.error });
       return;

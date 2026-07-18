@@ -1,14 +1,18 @@
-import { Document } from "mongoose";
+import { Document, Types } from "mongoose";
 
 export interface ICommunityMessage {
   _id: string;
   content: string;
+  color: string;
+  replyTo?: string | Types.ObjectId | ICommunityMessage | null;
   anonymousClientId?: string;
   createdAt: Date;
 }
 
 export interface ICommunityMessageDoc extends Document {
   content: string;
+  color: string;
+  replyTo?: Types.ObjectId | ICommunityMessageDoc | null;
   anonymousClientId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -16,21 +20,41 @@ export interface ICommunityMessageDoc extends Document {
 
 export interface InternalCommunityMessage {
   id: string;
+  _id: string;
   content: string;
+  message: string;
+  color: string;
+  replyTo?: {
+    id: string;
+    _id: string;
+    content: string;
+    message: string;
+    color: string;
+  } | null;
   createdAt: string;
   anonymousClientId?: string;
 }
 
 export interface PublicCommunityMessage {
   id: string;
+  _id: string;
   content: string;
+  message: string;
+  color: string;
+  replyTo?: {
+    id: string;
+    _id: string;
+    content: string;
+    message: string;
+    color: string;
+  } | null;
   createdAt: string;
   isMine: boolean;
 }
 
 export interface ClientToServerEvents {
   "community:message:send": (
-    payload: { content: string },
+    payload: { content?: string; message?: string; color: string; replyTo?: string | null },
     ack: (response: { success: boolean; message?: string; messageId?: string }) => void
   ) => void;
   "community:history:request": () => void;

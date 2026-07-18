@@ -4,11 +4,22 @@ import type { ICommunityMessageDoc } from "./community.types";
 const communityMessageSchema = new Schema<ICommunityMessageDoc>(
   {
     content: {
-      type: String,
+      type: String, 
       required: true,
       trim: true,
       minlength: 2,
       maxlength: 500
+    },
+    color: {
+      type: String,
+      required: false,
+      default: "#808080"
+    },
+    replyTo: {
+      type: Schema.Types.ObjectId,
+      ref: "CommunityMessage",
+      required: false,
+      index: true
     },
     anonymousClientId: {
       type: String,
