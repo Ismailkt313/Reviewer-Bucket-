@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ArrowDown, MessageSquare } from "lucide-react";
 import { getApiUrl } from "@/app/utils/api";
 import { getSocket } from "@/app/utils/socket";
+import { getAnonymousClientId } from "@/app/utils/anonymous-id";
+import { useNotifications } from "@/app/hooks/useNotifications";
 
 type StudentExperience = {
   id: string;
@@ -74,6 +76,36 @@ export default function StudentExperiencesFeed({
   const [unreadCount, setUnreadCount] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+
+  const { markContentAsRead } = useNotifications();
+
+  useEffect(() => {
+    if (reviewerId) {
+      const expIds = experiencesList.map((e) => e.id);
+      markContentAsRead(reviewerId, expIds);
+    }
+  }, [reviewerId, experiencesList.length, markContentAsRead]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && experiencesList.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const experienceId = params.get("experienceId");
+      if (experienceId) {
+        const timer = setTimeout(() => {
+          const element = document.getElementById(`exp-${experienceId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            element.classList.add("highlight-pulse");
+            const highlightTimer = setTimeout(() => {
+              element.classList.remove("highlight-pulse");
+            }, 3000);
+            return () => clearTimeout(highlightTimer);
+          }
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [experiencesList]);
 
   const isNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -319,7 +351,8 @@ export default function StudentExperiencesFeed({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          content: trimmed
+          content: trimmed,
+          anonymousClientId: getAnonymousClientId()
         }),
         signal: controller.signal
       });
@@ -409,6 +442,7 @@ export default function StudentExperiencesFeed({
                 return (
                   <div
                     key={exp.id}
+                    id={`exp-${exp.id}`}
                     className="flex gap-2 items-start text-sm bg-background/40 hover:bg-background/70 p-2 md:p-2.5 rounded-xl border border-border/30 transition-colors duration-150"
                   >
                     <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[9px] md:text-[10px] font-bold text-muted select-none">
@@ -527,6 +561,16 @@ export default function StudentExperiencesFeed({
           </div>
         )}
       </div>
+      <style>{`
+        @keyframes highlight-pulse-animation {
+          0% { background-color: rgba(244, 63, 94, 0.25); border-color: rgba(244, 63, 94, 0.6); }
+          50% { background-color: rgba(244, 63, 94, 0.45); border-color: rgba(244, 63, 94, 0.9); }
+          100% { background-color: transparent; }
+        }
+        .highlight-pulse {
+          animation: highlight-pulse-animation 3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

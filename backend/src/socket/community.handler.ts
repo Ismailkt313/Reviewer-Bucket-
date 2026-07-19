@@ -77,6 +77,30 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
     socket.emit("community:online-count", { count: io.sockets.sockets.size });
   });
 
+  socket.on("community:page:join", async () => {
+    socket.join("community:active");
+    try {
+      const { CommunityReadStateModel } = await import("../modules/community/community-read-state.model.js");
+      await CommunityReadStateModel.findOneAndUpdate(
+        { clientId: anonymousClientId },
+        { lastReadAt: new Date() },
+        { upsert: true }
+      );
+      // Sync unread count to 0 for all connections of this user
+      for (const [_, s] of io.sockets.sockets.entries()) {
+        if (s.handshake.auth?.anonymousClientId === anonymousClientId) {
+          s.emit("community:unread:sync", { unreadCount: 0 });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update community read state on join:", err);
+    }
+  });
+
+  socket.on("community:page:leave", () => {
+    socket.leave("community:active");
+  });
+
   socket.on("community:message:send", async (
     payload: { content?: string; message?: string; color: string; replyTo?: string | null },
     ack: (response: { success: boolean; message?: string; messageId?: string }) => void
@@ -103,6 +127,15 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
     const publicMsg = toPublicMessage(result.message, false);
     CommunityBroadcaster.broadcastMessage(publicMsg, socket.id);
     ack({ success: true, messageId: result.message.id });
+
+    // Broadcast unread badge increments in real time to connected users outside the community page
+    for (const [_, s] of io.sockets.sockets.entries()) {
+      const isViewingCommunity = s.rooms.has("community:active");
+      const socketClientId = s.handshake.auth?.anonymousClientId;
+      if (socketClientId && socketClientId !== anonymousClientId && !isViewingCommunity) {
+        s.emit("community:unread:increment");
+      }
+    }
   });
 
   socket.on("disconnect", () => {

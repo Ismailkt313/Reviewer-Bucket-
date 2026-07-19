@@ -4,7 +4,8 @@ import { Types } from "mongoose";
 import { AppError } from "../../errors/app-error";
 
 const postExperienceSchema = z.object({
-  content: z.string().trim().min(2).max(1000)
+  content: z.string().trim().min(2).max(1000),
+  anonymousClientId: z.string().trim().optional()
 }).strict();
 
 const getExperiencesQuerySchema = z.object({

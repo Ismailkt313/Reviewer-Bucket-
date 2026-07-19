@@ -6,8 +6,20 @@ import { registerExperienceHandlers } from "./experience.handler.js";
 import type { ClientToServerEvents as CommunityClientToServer, ServerToClientEvents as CommunityServerToClient } from "../modules/community/community.types.js";
 import type { ClientToServerEvents as ExperienceClientToServer, ServerToClientEvents as ExperienceServerToClient } from "../modules/experiences/experience.socket.types.js";
 
-export interface CombinedClientToServer extends CommunityClientToServer, ExperienceClientToServer {}
-export interface CombinedServerToClient extends CommunityServerToClient, ExperienceServerToClient {}
+export interface NotificationServerToClient {
+  "notification:new": (data: { notification: any }) => void;
+  "notification:read:sync": (data: { unreadCount: number }) => void;
+  "community:unread:sync": (data: { unreadCount: number }) => void;
+  "community:unread:increment": () => void;
+}
+
+export interface NotificationClientToServer {
+  "community:page:join": () => void;
+  "community:page:leave": () => void;
+}
+
+export interface CombinedClientToServer extends CommunityClientToServer, ExperienceClientToServer, NotificationClientToServer {}
+export interface CombinedServerToClient extends CommunityServerToClient, ExperienceServerToClient, NotificationServerToClient {}
 
 export type RealtimeSocketServer = SocketIOServer<CombinedClientToServer, CombinedServerToClient>;
 

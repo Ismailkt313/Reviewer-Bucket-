@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ExperienceService } from "./experience.service.js";
 import { cacheService } from "../../utils/cache";
 import { triggerRevalidate } from "../../utils/revalidate";
+import { ReviewerModel } from "../reviewers/reviewer.model.js";
 
 const experienceService = new ExperienceService();
 
@@ -11,7 +12,7 @@ export const postExperience = async (
   next: NextFunction
 ): Promise<void> => {
   const { reviewerId } = req.params;
-  const { content } = req.body;
+  const { content, anonymousClientId } = req.body;
   const contentPreview = content ? (content.substring(0, 30) + (content.length > 30 ? "..." : "")) : "";
 
   console.log(`[EXPERIENCE_SUBMISSION] [START] Initiating experience submit for reviewerId=${reviewerId}, contentPreview="${contentPreview}"`);
@@ -41,6 +42,32 @@ export const postExperience = async (
     } catch (err) {
       console.error(`[EXPERIENCE_SUBMISSION] [ERROR] Failed to broadcast experience id=${experience._id.toString()}:`, err);
     }
+
+    // Trigger experience shared notification asynchronously
+    ReviewerModel.findById(reviewerId)
+      .then((reviewer) => {
+        if (reviewer) {
+          import("../notifications/notification.service.js")
+            .then(({ notificationService }) => {
+              notificationService.createNotification(
+                "new_experience",
+                `A new experience was shared for ${reviewer.code}.`,
+                anonymousClientId,
+                {
+                  experienceId: experience._id.toString(),
+                  reviewerId: reviewer._id.toString(),
+                  reviewerSlug: reviewer.slug
+                }
+              );
+            })
+            .catch((err) => {
+              console.error("Failed to create experience notification:", err);
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to find reviewer for experience notification:", err);
+      });
 
     res.status(201).json({
       success: true,

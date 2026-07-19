@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Socket } from "socket.io-client";
 import { getSocket } from "@/app/utils/socket";
 import { useVisualViewport } from "@/app/hooks/useVisualViewport";
+import NotificationPanel from "../components/NotificationPanel";
+import { useCommunityUnread } from "../hooks/useCommunityUnread";
 
 const ACCESSIBLE_COLORS = [
   "#a855f7", // Purple
@@ -121,6 +123,12 @@ export default function CommunityClient() {
       window.removeEventListener("keydown", handleGlobalKeyDown);
     };
   }, []);
+
+  const { markCommunityRead } = useCommunityUnread();
+
+  useEffect(() => {
+    markCommunityRead();
+  }, [markCommunityRead]);
 
   const handleInitiateReply = useCallback((msg: PublicCommunityMessage) => {
     setReplyingTo(msg);
@@ -271,6 +279,7 @@ export default function CommunityClient() {
       setError("");
       socket.emit("community:history:request");
       socket.emit("community:online-count:request");
+      socket.emit("community:page:join");
     };
 
     const handleDisconnect = () => {
@@ -341,9 +350,11 @@ export default function CommunityClient() {
       setError("");
       socket.emit("community:history:request");
       socket.emit("community:online-count:request");
+      socket.emit("community:page:join");
     }
 
     return () => {
+      socket.emit("community:page:leave");
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
@@ -478,7 +489,7 @@ export default function CommunityClient() {
             <div className="flex-1 min-w-0">
               <h1 className="text-sm font-semibold tracking-tight text-foreground leading-tight">Community Feed</h1>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {status === "connected" ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px] font-medium text-secondary">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -491,6 +502,7 @@ export default function CommunityClient() {
                   {status === "disconnected" && "Disconnected"}
                 </span>
               )}
+              <NotificationPanel />
             </div>
           </div>
         </div>

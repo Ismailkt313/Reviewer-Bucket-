@@ -180,6 +180,23 @@ export const approveRequest = async (
     // Invalidate list cache since a new approved reviewer is active
     await cacheService.del("reviewers:list");
 
+    // Trigger reviewer approved notification asynchronously
+    import("../notifications/notification.service.js")
+      .then(({ notificationService }) => {
+        notificationService.createNotification(
+          "reviewer_approved",
+          `A new reviewer has been approved: ${reviewer.code} - ${reviewer.name}`,
+          undefined,
+          {
+            reviewerId: reviewer._id.toString(),
+            reviewerSlug: reviewer.slug
+          }
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to create reviewer approved notification:", err);
+      });
+
     res.status(200).json({
       success: true,
       data: {

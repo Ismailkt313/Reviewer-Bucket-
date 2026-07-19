@@ -114,6 +114,9 @@ export class ReviewerUpdateRequestService {
       stacks: mergedStacks
     });
 
+    const oldCode = targetReviewer.code;
+    const oldName = targetReviewer.name;
+
     // Mark request as approved
     const updated = await this.requestRepository.update(id, {
       status: "APPROVED",
@@ -124,6 +127,24 @@ export class ReviewerUpdateRequestService {
     if (!updated) {
       throw new AppError(500, "Failed to update the request status.");
     }
+
+    // Trigger reviewer update approved notification asynchronously
+    import("../notifications/notification.service.js")
+      .then(({ notificationService }) => {
+        notificationService.createNotification(
+          "reviewer_update_approved",
+          `Reviewer updated: ${oldCode} - ${oldName} → ${mergedCode} - ${mergedName}`,
+          undefined,
+          {
+            reviewerUpdateId: request._id.toString(),
+            reviewerId: targetReviewer._id.toString(),
+            reviewerSlug: targetReviewer.slug
+          }
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to create reviewer update approved notification:", err);
+      });
 
     return updated;
   }
