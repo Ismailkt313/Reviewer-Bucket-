@@ -37,7 +37,7 @@ export default function ReviewerDetailWrapper({
 }: ReviewerDetailWrapperProps) {
   const [currentReviewer, setCurrentReviewer] = useState(reviewer);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   useVisualViewport();
 
@@ -46,9 +46,6 @@ export default function ReviewerDetailWrapper({
       const checkMobile = () => {
         const mobile = window.innerWidth < 768;
         setIsMobile(mobile);
-        if (mobile) {
-          setIsCollapsed(true);
-        }
       };
       checkMobile();
       window.addEventListener("resize", checkMobile);
@@ -79,7 +76,7 @@ export default function ReviewerDetailWrapper({
       <div className="mx-auto max-w-3xl px-4 py-1 md:py-2 flex-1 min-h-0 flex flex-col w-full relative">
         {/* Mobile collapsed header bar */}
         <div
-          onClick={() => isMobile && setIsCollapsed(prev => !prev)}
+          onClick={() => setIsCollapsed(prev => !prev)}
           className="md:hidden flex-shrink-0 flex items-center gap-3 px-4 h-12 border border-border bg-surface rounded-xl cursor-pointer select-none mb-1"
         >
           <Link
@@ -100,12 +97,16 @@ export default function ReviewerDetailWrapper({
             <span className="text-[10px] text-muted truncate block">{currentReviewer.stacks.join(" • ") || "General"}</span>
           </div>
           <div className="text-secondary p-1">
-            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${resolvedCollapsed ? "" : "rotate-180"}`} />
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`} />
           </div>
         </div>
 
         {/* Reviewer profile/rating section (collapsible on mobile) */}
-        <div className={`transition-all duration-300 ease-in-out origin-top flex-shrink-0 ${resolvedCollapsed ? "max-h-0 opacity-0 -translate-y-4 scale-95 pointer-events-none overflow-hidden pb-0" : "max-h-[350px] opacity-100 translate-y-0 scale-100 pb-2"}`}>
+        <div className={`transition-all duration-300 ease-in-out origin-top flex-shrink-0 ${
+          isCollapsed
+            ? "max-h-0 opacity-0 -translate-y-4 scale-95 pointer-events-none overflow-hidden pb-0 md:max-h-[350px] md:opacity-100 md:translate-y-0 md:scale-100 md:pointer-events-auto md:pb-2"
+            : "max-h-[350px] opacity-100 translate-y-0 scale-100 pointer-events-auto pb-2"
+        }`}>
           <ReviewerRatingSection
             reviewerId={currentReviewer.id}
             reviewerName={currentReviewer.name}
@@ -127,6 +128,7 @@ export default function ReviewerDetailWrapper({
             initialNextCursor={initialNextCursor}
             initialHasMore={initialHasMore}
             onCollapsedChange={handleCollapsedChange}
+            isProfileCollapsed={isCollapsed}
           />
         </div>
       </div>

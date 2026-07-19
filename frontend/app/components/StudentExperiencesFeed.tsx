@@ -17,6 +17,7 @@ type StudentExperiencesFeedProps = {
   initialNextCursor: string | null;
   initialHasMore: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  isProfileCollapsed?: boolean;
 };
 
 function getRelativeTime(dateString: string): string {
@@ -53,13 +54,15 @@ export default function StudentExperiencesFeed({
   initialExperiences,
   initialNextCursor,
   initialHasMore,
-  onCollapsedChange
+  onCollapsedChange,
+  isProfileCollapsed
 }: StudentExperiencesFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollTracker = useRef({ lastY: 0, cumulativeUp: 0 });
   const isUserScrollingRef = useRef(false);
   const shouldScrollToBottomRef = useRef(false);
+  const ignoreScrollRef = useRef(false);
 
   const [experiencesList, setExperiencesList] = useState<StudentExperience[]>(initialExperiences);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -70,6 +73,7 @@ export default function StudentExperiencesFeed({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
   const isNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -95,8 +99,21 @@ export default function StudentExperiencesFeed({
     }
   }, []);
 
+  const toggleExpand = useCallback((id: string) => {
+    ignoreScrollRef.current = true;
+    setExpandedComments((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+    setTimeout(() => {
+      ignoreScrollRef.current = false;
+    }, 100);
+  }, []);
+
   // Collapse profile card on scroll (existing behavior)
   const handleContainerScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (ignoreScrollRef.current) return;
+    if (!isUserScrollingRef.current) return;
     const scrollTop = e.currentTarget.scrollTop;
     if (onCollapsedChange) {
       onCollapsedChange(scrollTop > 180);
@@ -145,14 +162,14 @@ export default function StudentExperiencesFeed({
     const handleTouchEnd = () => {
       setTimeout(() => {
         isUserScrollingRef.current = false;
-      }, 800);
+      }, 400);
     };
 
     const handleWheel = () => {
       isUserScrollingRef.current = true;
       setTimeout(() => {
         isUserScrollingRef.current = false;
-      }, 800);
+      }, 400);
     };
 
     el.addEventListener("scroll", handleScroll, { passive: true });
@@ -169,6 +186,15 @@ export default function StudentExperiencesFeed({
       el.removeEventListener("wheel", handleWheel);
     };
   }, []);
+
+  // Ignore scroll events for 400ms after the profile collapsed state changes to prevent transition scroll events from overriding the state
+  useEffect(() => {
+    ignoreScrollRef.current = true;
+    const timer = setTimeout(() => {
+      ignoreScrollRef.current = false;
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [isProfileCollapsed]);
 
   // Scroll to bottom when own message is sent
   useEffect(() => {
@@ -373,31 +399,51 @@ export default function StudentExperiencesFeed({
 
           {experiencesList.length > 0 ? (
             <div className="flex flex-col gap-1 md:gap-1.5">
-              {experiencesList.map((exp) => (
-                <div
-                  key={exp.id}
-                  className="flex gap-2 items-start text-sm bg-background/40 hover:bg-background/70 p-2 md:p-2.5 rounded-xl border border-border/30 transition-colors duration-150"
-                >
-                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[9px] md:text-[10px] font-bold text-muted select-none">
-                    A
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="font-bold text-foreground text-[10px] md:text-[11px]"
-                      >
-                        <span>Anonymous Student</span>
-                      </span>
-                      <span className="text-[9px] md:text-[10px] text-muted font-medium">
-                        {getRelativeTime(exp.createdAt)}
-                      </span>
+              {experiencesList.map((exp) => {
+                const isLong = exp.content.length > 260;
+                const isExpanded = !!expandedComments[exp.id];
+                const displayText = isLong && !isExpanded
+                  ? exp.content.slice(0, 240) + "..."
+                  : exp.content;
+
+                return (
+                  <div
+                    key={exp.id}
+                    className="flex gap-2 items-start text-sm bg-background/40 hover:bg-background/70 p-2 md:p-2.5 rounded-xl border border-border/30 transition-colors duration-150"
+                  >
+                    <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-neutral-100 dark:bg-neutral-850 flex items-center justify-center flex-shrink-0 text-[9px] md:text-[10px] font-bold text-muted select-none">
+                      A
                     </div>
-                    <p className="mt-0.5 text-[12px] md:text-[13px] text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                      {exp.content}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="font-bold text-foreground text-[10px] md:text-[11px]"
+                        >
+                          <span>Anonymous Student</span>
+                        </span>
+                        <span className="text-[9px] md:text-[10px] text-muted font-medium">
+                          {getRelativeTime(exp.createdAt)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[12px] md:text-[13px] text-secondary leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                        {displayText}
+                        {isLong && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(exp.id)}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
+                            onTouchEnd={(e) => e.stopPropagation()}
+                            className="ml-1.5 inline-block text-[11px] font-bold text-accent hover:underline focus-visible:outline-none"
+                          >
+                            {isExpanded ? "Show less" : "Read more"}
+                          </button>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             /* Compact empty state — no large blank gap */
