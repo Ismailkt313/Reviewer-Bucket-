@@ -10,6 +10,7 @@ import Footer from "./components/Footer";
 import { getApiUrl } from "./utils/api";
 import { siteConfig } from "./config";
 import type { Reviewer } from "./data/reviewers";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export default async function Home() {
   let realReviewers: Reviewer[] = [];
@@ -176,6 +177,7 @@ export default async function Home() {
         <Disclaimer />
       </main>
       <Footer />
+      <SpeedInsights />
     </>
   );
 }
