@@ -42,33 +42,48 @@ export class CommunityRepository {
     };
   }
 
-  async getRecentMessages(limit: number): Promise<InternalCommunityMessage[]> {
-    const docs = await CommunityMessageModel.find()
+  async getRecentMessages(
+    limit: number = 30,
+    beforeId?: string
+  ): Promise<{ messages: InternalCommunityMessage[]; hasMore: boolean }> {
+    const query: any = {};
+    if (beforeId && Types.ObjectId.isValid(beforeId)) {
+      query._id = { $lt: new Types.ObjectId(beforeId) };
+    }
+
+    // Fetch one extra item to check if there are more older messages
+    const docs = await CommunityMessageModel.find(query)
       .populate({
         path: "replyTo",
         select: "content color _id"
       })
       .sort({ createdAt: -1, _id: -1 })
-      .limit(limit)
+      .limit(limit + 1)
       .lean();
 
-    const reversed = docs.reverse();
+    const hasMore = docs.length > limit;
+    const resultDocs = hasMore ? docs.slice(0, limit) : docs;
+    const reversed = resultDocs.reverse();
 
-    return reversed.map((doc: any) => ({
+    const messages = reversed.map((doc: any) => ({
       id: doc._id.toString(),
       _id: doc._id.toString(),
       content: doc.content,
       message: doc.content,
       color: doc.color || "#808080",
-      replyTo: doc.replyTo ? {
-        id: doc.replyTo._id.toString(),
-        _id: doc.replyTo._id.toString(),
-        content: doc.replyTo.content,
-        message: doc.replyTo.content,
-        color: doc.replyTo.color || "#808080"
-      } : null,
+      replyTo: doc.replyTo
+        ? {
+            id: doc.replyTo._id.toString(),
+            _id: doc.replyTo._id.toString(),
+            content: doc.replyTo.content,
+            message: doc.replyTo.content,
+            color: doc.replyTo.color || "#808080"
+          }
+        : null,
       createdAt: doc.createdAt.toISOString(),
       anonymousClientId: doc.anonymousClientId
     }));
+
+    return { messages, hasMore };
   }
 }

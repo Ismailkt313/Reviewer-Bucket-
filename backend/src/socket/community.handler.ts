@@ -60,13 +60,26 @@ export function registerCommunityHandlers(io: RealtimeSocketServer, socket: Sock
 
   socket.on("community:history:request", async () => {
     try {
-      const internalMessages = await communityService.getRecentHistory();
+      const { messages: internalMessages, hasMore } = await communityService.getRecentHistory(30);
       const messages = internalMessages.map((msg) =>
         toPublicMessage(msg, msg.anonymousClientId === anonymousClientId)
       );
-      socket.emit("community:history", { messages });
+      socket.emit("community:history", { messages, hasMore });
     } catch {
       socket.emit("community:error", { message: "Failed to load history" });
+    }
+  });
+
+  socket.on("community:history:more", async (payload: { beforeId: string }) => {
+    try {
+      if (!payload?.beforeId) return;
+      const { messages: internalMessages, hasMore } = await communityService.getRecentHistory(30, payload.beforeId);
+      const messages = internalMessages.map((msg) =>
+        toPublicMessage(msg, msg.anonymousClientId === anonymousClientId)
+      );
+      socket.emit("community:history:more:response", { messages, hasMore });
+    } catch {
+      socket.emit("community:error", { message: "Failed to load older messages" });
     }
   });
 

@@ -197,6 +197,17 @@ export default function CommunityClient() {
     return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
   }, []);
 
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const messagesRef = useRef<PublicCommunityMessage[]>(messages);
+  messagesRef.current = messages;
+  const hasMoreRef = useRef(hasMore);
+  hasMoreRef.current = hasMore;
+  const isLoadingMoreRef = useRef(isLoadingMore);
+  isLoadingMoreRef.current = isLoadingMore;
+  const oldScrollHeightRef = useRef<number>(0);
+
   useVisualViewport();
 
   useEffect(() => {
@@ -207,6 +218,21 @@ export default function CommunityClient() {
       const currentY = el.scrollTop;
       const tracker = scrollTracker.current;
       const delta = currentY - tracker.lastY;
+
+      // Trigger scroll-to-top older message chunk loading (WhatsApp style)
+      if (
+        currentY <= 40 &&
+        hasMoreRef.current &&
+        !isLoadingMoreRef.current &&
+        messagesRef.current.length > 0
+      ) {
+        isLoadingMoreRef.current = true;
+        setIsLoadingMore(true);
+        oldScrollHeightRef.current = el.scrollHeight;
+
+        const oldestId = messagesRef.current[0].id;
+        socketRef.current?.emit("community:history:more", { beforeId: oldestId });
+      }
 
       if (delta < 0 && isUserScrollingRef.current) {
         tracker.cumulativeUp += Math.abs(delta);
@@ -295,11 +321,34 @@ export default function CommunityClient() {
       setOnlineCount(data.count);
     };
 
-    const handleHistory = (data: { messages: PublicCommunityMessage[] }) => {
+    const handleHistory = (data: { messages: PublicCommunityMessage[]; hasMore?: boolean }) => {
       setMessages(data.messages);
+      setHasMore(data.hasMore ?? true);
       setTimeout(() => {
         scrollToBottom("instant");
       }, 50);
+    };
+
+    const handleHistoryMore = (data: { messages: PublicCommunityMessage[]; hasMore: boolean }) => {
+      if (data.messages && data.messages.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newMessages = data.messages.filter((m) => !existingIds.has(m.id));
+          return [...newMessages, ...prev];
+        });
+
+        requestAnimationFrame(() => {
+          if (scrollRef.current && oldScrollHeightRef.current > 0) {
+            const newScrollHeight = scrollRef.current.scrollHeight;
+            scrollRef.current.scrollTop = newScrollHeight - oldScrollHeightRef.current;
+            oldScrollHeightRef.current = 0;
+          }
+        });
+      }
+
+      setHasMore(data.hasMore);
+      setIsLoadingMore(false);
+      isLoadingMoreRef.current = false;
     };
 
     const handleMessageNew = (message: PublicCommunityMessage) => {
@@ -332,6 +381,8 @@ export default function CommunityClient() {
 
     const handleError = (data: { message: string }) => {
       setError(data.message);
+      setIsLoadingMore(false);
+      isLoadingMoreRef.current = false;
     };
 
     // Register ALL listeners BEFORE any emits to prevent race conditions.
@@ -340,6 +391,7 @@ export default function CommunityClient() {
     socket.on("connect_error", handleConnectError);
     socket.on("community:online-count", handleOnlineCount);
     socket.on("community:history", handleHistory);
+    socket.on("community:history:more:response", handleHistoryMore);
     socket.on("community:message:new", handleMessageNew);
     socket.on("community:error", handleError);
 
@@ -360,6 +412,7 @@ export default function CommunityClient() {
       socket.off("connect_error", handleConnectError);
       socket.off("community:online-count", handleOnlineCount);
       socket.off("community:history", handleHistory);
+      socket.off("community:history:more:response", handleHistoryMore);
       socket.off("community:message:new", handleMessageNew);
       socket.off("community:error", handleError);
     };
@@ -514,6 +567,14 @@ export default function CommunityClient() {
           className="flex-1 min-h-0 overflow-y-auto w-full scroll-smooth"
         >
           <div className="w-full max-w-[1000px] mx-auto px-4 sm:px-6 md:px-8 py-3 flex flex-col gap-1.5 min-h-full">
+            {isLoadingMore && (
+              <div className="flex justify-center py-2 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] text-secondary font-medium shadow-xs">
+                  <div className="w-3.5 h-3.5 border-2 border-border border-t-accent rounded-full animate-spin" />
+                  <span>Loading older messages...</span>
+                </div>
+              </div>
+            )}
             {messages.length > 0 ? (
               messages.map((msg) => (
                 <div

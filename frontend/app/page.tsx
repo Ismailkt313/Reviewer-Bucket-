@@ -127,14 +127,14 @@ export default async function Home() {
           "text": "Once an interview experience is submitted, it is reviewed for compliance and spam prevention, after which it cannot be directly edited by users to maintain the platform's authenticity."
         }
       },
-      {
-        "@type": "Question",
-        "name": "How do I prepare for a Brocamp technical interview or Brototype assessment?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "You can search for your assigned reviewer by code (e.g. BR64) or name on Reviewer Bucket. Read their profile to understand their core stacks, common questions, assessment style, and prepare accordingly."
-        }
-      },
+      // {
+      //   "@type": "Question",
+      //   "name": "How do I prepare for a Brocamp technical interview or Brototype assessment?",
+      //   "acceptedAnswer": {
+      //     "@type": "Answer",
+      //     "text": "You can search for your assigned reviewer by code (e.g. BR64) or name on Reviewer Bucket. Read their profile to understand their core stacks, common questions, assessment style, and prepare accordingly."
+      //   }
+      // },
       {
         "@type": "Question",
         "name": "What is the Reviewer Bucket community?",

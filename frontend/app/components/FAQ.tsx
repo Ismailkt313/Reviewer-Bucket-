@@ -43,11 +43,11 @@ const faqs = [
     answer:
       "Once an interview experience is submitted, it is reviewed for compliance and spam prevention, after which it cannot be directly edited by users to maintain the platform's authenticity.",
   },
-  {
-    question: "How do I prepare for a Brocamp technical interview or Brototype assessment?",
-    answer:
-      "You can search for your assigned reviewer by code (e.g. BR64) or name on Reviewer Bucket. Read their profile to understand their core stacks, common questions, assessment style, and prepare accordingly.",
-  },
+  // {
+  //   question: "How do I prepare for a Brocamp technical interview or Brototype assessment?",
+  //   answer:
+  //     "You can search for your assigned reviewer by code (e.g. BR64) or name on Reviewer Bucket. Read their profile to understand their core stacks, common questions, assessment style, and prepare accordingly.",
+  // },
   {
     question: "What is the Reviewer Bucket community?",
     answer:

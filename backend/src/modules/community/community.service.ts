@@ -34,7 +34,10 @@ export class CommunityService {
     }
   }
 
-  async getRecentHistory(): Promise<InternalCommunityMessage[]> {
-    return this.repository.getRecentMessages(env.COMMUNITY_HISTORY_LIMIT);
+  async getRecentHistory(
+    limit: number = env.COMMUNITY_HISTORY_LIMIT || 30,
+    beforeId?: string
+  ): Promise<{ messages: InternalCommunityMessage[]; hasMore: boolean }> {
+    return this.repository.getRecentMessages(limit, beforeId);
   }
 }

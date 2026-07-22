@@ -58,12 +58,14 @@ export interface ClientToServerEvents {
     ack: (response: { success: boolean; message?: string; messageId?: string }) => void
   ) => void;
   "community:history:request": () => void;
+  "community:history:more": (payload: { beforeId: string }) => void;
   "community:online-count:request": () => void;
 }
 
 export interface ServerToClientEvents {
   "community:message:new": (message: PublicCommunityMessage) => void;
-  "community:history": (payload: { messages: PublicCommunityMessage[] }) => void;
+  "community:history": (payload: { messages: PublicCommunityMessage[]; hasMore?: boolean }) => void;
+  "community:history:more:response": (payload: { messages: PublicCommunityMessage[]; hasMore: boolean }) => void;
   "community:online-count": (payload: { count: number }) => void;
   "community:error": (payload: { message: string }) => void;
 }
