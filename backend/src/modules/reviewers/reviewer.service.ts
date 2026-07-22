@@ -30,21 +30,23 @@ export class ReviewerService {
   }
 
   async createReviewer(input: {
-    name: string;
+    name?: string | null;
     code: string;
     stacks: string[];
     status?: "PENDING" | "APPROVED" | "REJECTED";
   }): Promise<IReviewer> {
     const normalizedCode = input.code.replace(/[\s-]/g, "").toUpperCase();
     const slug = normalizedCode.toLowerCase();
-    const normalizedName = input.name.trim().replace(/\s+/g, " ");
+    const normalizedName = typeof input.name === "string" ? input.name.trim().replace(/\s+/g, " ") : "";
 
-    // Check APPROVED or PENDING duplicates by code or name
+    // Check APPROVED or PENDING duplicates ONLY by reviewer code
     const existingByCode = await this.reviewerRepository.findByCodeAndStatusList(normalizedCode, ["APPROVED", "PENDING"]);
-    const existingByName = await this.reviewerRepository.findByNameAndStatusList(normalizedName, ["APPROVED", "PENDING"]);
 
-    if (existingByCode || existingByName) {
-      throw new AppError(409, "This reviewer already exists or is awaiting approval.");
+    if (existingByCode) {
+      if (existingByCode.status === "PENDING") {
+        throw new AppError(409, "Reviewer code is awaiting approval.");
+      }
+      throw new AppError(409, "Reviewer code already exists.");
     }
 
     try {
@@ -62,7 +64,7 @@ export class ReviewerService {
         "code" in error &&
         (error as { code: number }).code === 11000
       ) {
-        throw new AppError(409, "This reviewer already exists or is awaiting approval.");
+        throw new AppError(409, "Reviewer code already exists.");
       }
       throw error;
     }

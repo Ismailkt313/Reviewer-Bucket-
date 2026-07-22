@@ -129,6 +129,17 @@ export default function AddReviewerModal({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isDropdownOpen]);
 
+  // Auto-scroll modal body when dropdown opens so the options list is fully visible above footer
+  useEffect(() => {
+    if (isDropdownOpen && dropdownRef.current) {
+      const timer = setTimeout(() => {
+        dropdownRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        searchInputRef.current?.focus();
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isDropdownOpen]);
+
   // Toast auto-dismiss
   useEffect(() => {
     if (!toast) return;
@@ -198,7 +209,7 @@ export default function AddReviewerModal({
         if (res.status === 409) {
           const errMsg = json.message || (mode === "edit"
             ? "An update request for this reviewer is already under review."
-            : "This reviewer already exists or is awaiting approval.");
+            : "Reviewer code already exists.");
           setErrors({ code: errMsg });
         } else {
           setErrors({ general: json.message || "Something went wrong. Please try again." });
@@ -380,9 +391,16 @@ export default function AddReviewerModal({
               </div>
 
               {/* Stacks */}
-              <div ref={dropdownRef} className="relative">
-                <label className="block text-xs font-semibold text-secondary mb-1.5">
-                  Stack <span className="text-red-500">*</span>
+              <div ref={dropdownRef} className="relative pb-4">
+                <label className="block text-xs font-semibold text-secondary mb-1.5 flex items-center justify-between">
+                  <span>
+                    Stack <span className="text-red-500">*</span>
+                  </span>
+                  {selectedStacks.length > 0 && (
+                    <span className="text-[10px] text-muted font-normal">
+                      {selectedStacks.length}/10 selected
+                    </span>
+                  )}
                 </label>
 
                 {/* Custom popover trigger containing selected chips */}
@@ -394,25 +412,25 @@ export default function AddReviewerModal({
                   tabIndex={0}
                   onClick={() => {
                     setIsDropdownOpen((prev) => !prev);
-                    if (!isDropdownOpen) {
-                      setTimeout(() => searchInputRef.current?.focus(), 50);
-                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       setIsDropdownOpen((prev) => !prev);
-                      if (!isDropdownOpen) {
-                        setTimeout(() => searchInputRef.current?.focus(), 50);
-                      }
                     }
                   }}
-                  className={`w-full min-h-[44px] flex flex-wrap gap-1.5 p-2 rounded-xl border bg-background text-sm cursor-pointer transition-colors items-center justify-between ${
-                    errors.stacks ? "border-red-400 dark:border-red-600" : "border-border hover:border-neutral-405 focus:border-neutral-450 dark:focus:border-neutral-500"
-                  } focus:outline-none focus:ring-2 focus:ring-focus/15`}
+                  className={`w-full min-h-[44px] flex flex-wrap gap-1.5 p-2 rounded-xl border bg-background text-sm cursor-pointer transition-all duration-200 items-center justify-between ${
+                    isDropdownOpen
+                      ? "border-accent ring-2 ring-accent/20 bg-neutral-50/50 dark:bg-neutral-850/50 shadow-sm"
+                      : errors.stacks
+                      ? "border-red-400 dark:border-red-600"
+                      : "border-border hover:border-neutral-400 dark:hover:border-neutral-500"
+                  } focus:outline-none focus:ring-2 focus:ring-accent/20`}
                 >
                   {selectedStacks.length === 0 ? (
-                    <span className="text-muted/60 px-1.5 select-none">Select stacks...</span>
+                    <span className="text-muted/60 px-1.5 select-none text-xs">
+                      Select technology stacks...
+                    </span>
                   ) : (
                     <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
                       {selectedStacks.map((stack) => (
@@ -422,25 +440,29 @@ export default function AddReviewerModal({
                             e.stopPropagation();
                             removeStack(stack);
                           }}
-                          className="inline-flex items-center gap-1 bg-accent/10 text-accent border border-accent/20 rounded-lg px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150 animate-scale-in"
+                          className="inline-flex items-center gap-1 bg-accent/10 text-accent border border-accent/20 rounded-lg px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-150 animate-scale-in hover:bg-accent/20"
                         >
                           {stack}
-                          <span className="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-accent/20 transition-colors">
+                          <span className="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-accent/30 transition-colors">
                             <X className="w-2.5 h-2.5" />
                           </span>
                         </span>
                       ))}
                     </div>
                   )}
-                  <ChevronDown className={`w-4 h-4 text-muted flex-shrink-0 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180 text-accent" : "text-muted"
+                    }`}
+                  />
                 </div>
 
                 {/* Custom Popover Dropdown panel */}
                 {isDropdownOpen && (
-                  <div className="absolute left-0 right-0 mt-1.5 border border-border rounded-xl bg-surface shadow-lg overflow-hidden animate-scale-in z-30 flex flex-col max-h-[250px] w-full backdrop-blur-xs">
+                  <div className="absolute left-0 right-0 mt-2 border border-border/80 rounded-2xl bg-surface/98 backdrop-blur-md shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-40 flex flex-col max-h-[260px] w-full ring-1 ring-black/5 dark:ring-white/10">
                     {/* Sticky Search */}
-                    <div className="px-3 py-2 border-b border-border/60 flex-shrink-0 bg-surface">
-                      <div className="relative">
+                    <div className="px-3 py-2 border-b border-border/60 flex-shrink-0 bg-surface/90">
+                      <div className="relative flex items-center">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
                         <input
                           ref={searchInputRef}
@@ -452,13 +474,22 @@ export default function AddReviewerModal({
                           }}
                           onKeyDown={handleSearchKeyDown}
                           placeholder="Search stacks..."
-                          className="w-full h-8 pl-8 pr-3 rounded-lg border border-border/60 bg-background text-[16px] md:text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-focus/15"
+                          className="w-full h-8 pl-8 pr-7 rounded-lg border border-border/60 bg-background text-[16px] md:text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-accent/30"
                         />
+                        {stackSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setStackSearch("")}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {/* Scrollable list options */}
-                    <div role="listbox" id="stack-listbox" className="overflow-y-auto py-1 flex-1">
+                    <div role="listbox" id="stack-listbox" className="overflow-y-auto py-1 flex-1 space-y-0.5 px-1">
                       {filteredStacks.length > 0 ? (
                         filteredStacks.map((stack, idx) => {
                           const isSelected = selectedStacks.includes(stack);
@@ -475,12 +506,18 @@ export default function AddReviewerModal({
                               onClick={() => {
                                 toggleStack(stack);
                               }}
-                              className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left transition-colors ${
+                              className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left rounded-lg transition-colors ${
                                 isDisabled
                                   ? "opacity-40 cursor-not-allowed"
-                                  : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
-                              } ${isSelected ? "bg-accent/5 text-accent font-semibold" : "text-foreground"} ${
-                                isFocused ? "bg-neutral-100/70 dark:bg-neutral-800/70" : ""
+                                  : "hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                              } ${
+                                isSelected
+                                  ? "bg-accent/10 text-accent font-semibold"
+                                  : "text-foreground"
+                              } ${
+                                isFocused && !isSelected
+                                  ? "bg-neutral-100 dark:bg-neutral-800 ring-1 ring-inset ring-border"
+                                  : ""
                               }`}
                             >
                               <span className="flex-1 truncate">{stack}</span>

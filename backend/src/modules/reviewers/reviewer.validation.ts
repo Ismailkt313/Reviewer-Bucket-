@@ -22,11 +22,10 @@ const ALLOWED_STACKS = [
 const createReviewerSchema = z.object({
   name: z
     .string()
-    .trim()
-    .transform((val) => val.replace(/\s+/g, " "))
-    .pipe(z.string().max(100, "Name must be at most 100 characters."))
+    .nullable()
     .optional()
-    .or(z.literal("")),
+    .transform((val) => (val ? val.trim().replace(/\s+/g, " ") : ""))
+    .pipe(z.string().max(100, "Name must be at most 100 characters.")),
   code: z
     .string()
     .trim()
