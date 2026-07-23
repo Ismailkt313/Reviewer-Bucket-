@@ -169,6 +169,14 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
     setIsModalOpen(true);
   };
 
+  useEffect(() => {
+    const handleOpenModal = () => {
+      openModalBlank();
+    };
+    window.addEventListener("open-request-reviewer-modal", handleOpenModal);
+    return () => window.removeEventListener("open-request-reviewer-modal", handleOpenModal);
+  }, []);
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -313,11 +321,10 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                     setSelectedStack(stack);
                     setVisibleCount(8);
                   }}
-                  className={`flex-shrink-0 h-10 md:h-[44px] px-4 md:px-[22px] rounded-full text-[14px] md:text-[16px] font-bold transition-colors select-none tracking-tight ${
-                    selectedStack === stack
-                      ? "bg-accent text-background"
-                      : "bg-surface border border-border/70 hover:bg-neutral-55 dark:hover:bg-neutral-855 text-secondary"
-                  }`}
+                  className={`flex-shrink-0 h-10 md:h-[44px] px-4 md:px-[22px] rounded-full text-[14px] md:text-[16px] font-bold transition-colors select-none tracking-tight ${selectedStack === stack
+                    ? "bg-accent text-background"
+                    : "bg-surface border border-border/70 hover:bg-neutral-55 dark:hover:bg-neutral-855 text-secondary"
+                    }`}
                 >
                   {stack}
                 </button>
@@ -329,11 +336,10 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                   type="button"
                   id="more-stack-trigger"
                   onClick={() => setIsMoreOpen(!isMoreOpen)}
-                  className={`flex-shrink-0 h-10 md:h-[44px] px-4 md:px-[22px] rounded-full text-[14px] md:text-[16px] font-bold transition-colors select-none flex items-center gap-2 tracking-tight ${
-                    isMoreSelected
-                      ? "bg-accent text-background"
-                      : "bg-surface border border-border/70 hover:bg-neutral-50 dark:hover:bg-neutral-855 text-secondary"
-                  }`}
+                  className={`flex-shrink-0 h-10 md:h-[44px] px-4 md:px-[22px] rounded-full text-[14px] md:text-[16px] font-bold transition-colors select-none flex items-center gap-2 tracking-tight ${isMoreSelected
+                    ? "bg-accent text-background"
+                    : "bg-surface border border-border/70 hover:bg-neutral-50 dark:hover:bg-neutral-855 text-secondary"
+                    }`}
                 >
                   <span>{isMoreSelected ? selectedStack : "More"}</span>
                   <ChevronDown className="w-4 h-4 align-middle" />
@@ -354,11 +360,10 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                             setVisibleCount(8);
                             setIsMoreOpen(false);
                           }}
-                          className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[13px] md:text-[14px] font-bold transition-colors ${
-                            selectedStack === stack
-                              ? "bg-neutral-100 dark:bg-neutral-800 text-foreground"
-                              : "text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-foreground"
-                          }`}
+                          className={`w-full text-left px-3.5 py-2.5 rounded-lg text-[13px] md:text-[14px] font-bold transition-colors ${selectedStack === stack
+                            ? "bg-neutral-100 dark:bg-neutral-800 text-foreground"
+                            : "text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-foreground"
+                            }`}
                         >
                           {stack}
                         </button>
@@ -381,7 +386,7 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                 <div className="fixed inset-x-0 bottom-0 bg-surface rounded-t-2xl border-t border-border z-50 flex flex-col max-h-[75vh] animate-in slide-in-from-bottom duration-200 ease-out pb-safe">
                   {/* Drag Handle Indicator */}
                   <div className="mx-auto my-3.5 w-10 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-850 flex-shrink-0" />
-                  
+
                   {/* Sheet Header */}
                   <div className="px-4 pb-3.5 border-b border-border/40 flex items-center justify-between">
                     <span className="text-[14px] font-bold text-foreground">Select Stacks</span>
@@ -405,11 +410,10 @@ export default function ReviewerExplorer({ reviewers: initialReviewers }: Review
                           setVisibleCount(8);
                           setIsMoreOpen(false);
                         }}
-                        className={`w-full text-left h-11 px-4 rounded-xl text-[13px] md:text-[14px] font-bold flex items-center justify-between transition-colors ${
-                          selectedStack === stack
-                            ? "bg-neutral-100 dark:bg-neutral-800 text-foreground"
-                            : "text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-foreground"
-                        }`}
+                        className={`w-full text-left h-11 px-4 rounded-xl text-[13px] md:text-[14px] font-bold flex items-center justify-between transition-colors ${selectedStack === stack
+                          ? "bg-neutral-100 dark:bg-neutral-800 text-foreground"
+                          : "text-secondary hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:text-foreground"
+                          }`}
                       >
                         <span>{stack}</span>
                         {selectedStack === stack && (

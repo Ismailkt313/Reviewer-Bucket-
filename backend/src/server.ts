@@ -14,7 +14,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
   console.log(`Received ${signal}. Starting graceful shutdown...`);
 
   const io = getIO();
-  if (io) {  
+  if (io) {
     io.close(() => {
       console.log("Socket.IO closed");
     });

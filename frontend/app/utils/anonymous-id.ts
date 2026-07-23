@@ -3,10 +3,18 @@ const STORAGE_KEY = "reviewerBucket:anonymousClientId";
 export function getAnonymousClientId(): string {
   if (typeof window === "undefined") return "";
 
-  let clientId = localStorage.getItem(STORAGE_KEY);
-  if (!clientId) {
-    clientId = crypto.randomUUID();
-    localStorage.setItem(STORAGE_KEY, clientId);
+  try {
+    let clientId = localStorage.getItem(STORAGE_KEY);
+    if (!clientId) {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        clientId = crypto.randomUUID();
+      } else {
+        clientId = "anon_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      }
+      localStorage.setItem(STORAGE_KEY, clientId);
+    }
+    return clientId;
+  } catch {
+    return "anonymous_fallback_client";
   }
-  return clientId;
 }

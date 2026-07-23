@@ -9,6 +9,8 @@ export function useCommunityUnread() {
   const fetchCommunityUnread = useCallback(async () => {
     try {
       const clientId = getAnonymousClientId();
+      if (!clientId) return;
+
       const res = await fetch(getApiUrl(`/api/community/unread?anonymousClientId=${clientId}`), {
         headers: {
           "x-anonymous-client-id": clientId
@@ -21,9 +23,10 @@ export function useCommunityUnread() {
         }
       }
     } catch (err) {
-      console.error("Failed to fetch community unread count:", err);
+      console.warn("[Community] Backend server unreachable or connection refused:", err);
     }
   }, []);
+
 
   const markCommunityRead = useCallback(async () => {
     // Optimistic UI update

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Header from "./components/Header";
+import AnnouncementBar from "./components/AnnouncementBar";
 import Hero from "./components/Hero";
+
 import ReviewerExplorer from "./components/ReviewerExplorer";
 import HowItWorks from "./components/HowItWorks";
 import About from "./components/About";
@@ -169,6 +171,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       <Header />
+      <AnnouncementBar />
       <main className="flex-1">
         <Hero />
         <Suspense fallback={null}>

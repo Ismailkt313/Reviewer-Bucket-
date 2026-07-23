@@ -38,6 +38,8 @@ export function useNotifications() {
   const fetchNotifications = useCallback(async () => {
     try {
       const clientId = getAnonymousClientId();
+      if (!clientId) return;
+
       const res = await fetch(getApiUrl(`/api/notifications?anonymousClientId=${clientId}`), {
         headers: {
           "x-anonymous-client-id": clientId
@@ -51,11 +53,12 @@ export function useNotifications() {
         }
       }
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
+      console.warn("[Notifications] Backend server unreachable or connection refused:", err);
     } finally {
       setLoading(false);
     }
   }, []);
+
 
   const markAllAsRead = useCallback(async (): Promise<boolean> => {
     const prevNotifications = notifications;
